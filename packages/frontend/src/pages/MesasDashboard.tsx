@@ -7,8 +7,8 @@ import {
   solicitarFechamento,
   liberarMesa,
 } from '../services/api';
-import type { Mesa } from '../types'; 
-import { MesaCardDashboard } from '../components/MesaCardDashboard'; 
+import type { Mesa } from '../types';
+import { MesaCardDashboard } from '../components/MesaCardDashboard';
 import { ModalDetalhesMesa } from '../components/ModalDetalhesMesa';
 import { ModalAdicionarItens } from '../components/ModalAdicionarItens';
 import { ModalTransferirMesa } from '../components/ModalTransferirMesa';
@@ -27,7 +27,7 @@ const filtros: { label: string; valor: FiltroStatus; icon: string; cor: string }
 ];
 
 export function MesasDashboard() {
-  const [mesasAtivas, setMesasAtivas] = useState<Mesa[]>([]); 
+  const [mesasAtivas, setMesasAtivas] = useState<Mesa[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +35,7 @@ export function MesasDashboard() {
   const [modalDetalhes, setModalDetalhes] = useState(false);
   const [modalTransferir, setModalTransferir] = useState(false);
   const [modalAdicionar, setModalAdicionar] = useState(false);
-  
+
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('TODAS');
 
   const fetchMesas = useCallback(async (showLoading = true) => {
@@ -61,26 +61,28 @@ export function MesasDashboard() {
     if (loading) return;
     setLoading(true);
     setError(null);
-    
+
     try {
-      const novaMesa = await abrirMesa(numMesa);
+      const novaMesaApi = await abrirMesa(numMesa);
       
-      // Atualiza o estado local imediatamente
+      const novaMesaSegura: Mesa = { 
+        ...novaMesaApi, 
+        quitens: novaMesaApi.quitens || [],
+      };
+
       setMesasAtivas(prev => {
         const mesasAtualizadas = prev.filter(m => m.num_quiosque !== numMesa);
-        return [...mesasAtualizadas, novaMesa];
+        return [...mesasAtualizadas, novaMesaSegura];
       });
-      
-      setMesaSelecionada(novaMesa);
-      setModalDetalhes(true);
-      
-      // Recarrega para garantir sincronização
+
+      setMesaSelecionada(novaMesaSegura);
+      setModalDetalhes(true); 
+
       setTimeout(() => {
         fetchMesas(false);
       }, 500);
     } catch (err: any) {
       console.error('Erro ao abrir mesa:', err);
-      setError(err.response?.data?.message || 'Erro ao abrir mesa');
       alert(`Erro ao abrir mesa: ${err.response?.data?.message || err.message}`);
     } finally {
       setLoading(false);
@@ -93,15 +95,23 @@ export function MesasDashboard() {
     if (confirm(`Solicitar fechamento da Mesa ${mesaSelecionada.num_quiosque}?`)) {
       setLoading(true);
       try {
-        const mesaAtualizada = await solicitarFechamento(mesaSelecionada.codseq);
-        
-        // Atualiza o estado local imediatamente
-        setMesasAtivas(prev => 
-          prev.map(m => m.codseq === mesaAtualizada.codseq ? mesaAtualizada : m)
+        const mesaAtualizadaApi = await solicitarFechamento(mesaSelecionada.codseq);
+
+        // *** A CORREÇÃO ESTÁ AQUI ***
+        // Nós mesclamos a mesa ATUAL (que tem os itens) com a resposta da API (que tem o novo status)
+        const mesaSegura: Mesa = {
+          ...mesaSelecionada,       // 1. Base: A mesa atual com todos os itens
+          ...mesaAtualizadaApi,     // 2. Sobrescreve: O novo status (ex: obs: 'PAGAMENTO')
+          quitens: mesaSelecionada.quitens || [], // 3. Garantia final de que os itens existem
+        };
+
+        // Atualiza o estado local imediatamente com o objeto seguro
+        setMesasAtivas(prev =>
+          prev.map(m => m.codseq === mesaSegura.codseq ? mesaSegura : m)
         );
-        
-        setMesaSelecionada(mesaAtualizada);
-        
+
+        setMesaSelecionada(mesaSegura); // <-- Atualiza o modal com o objeto seguro (e com itens)
+
         // Recarrega para garantir sincronização
         await fetchMesas(false);
       } catch (err: any) {
@@ -125,15 +135,15 @@ export function MesasDashboard() {
       setLoading(true);
       try {
         await liberarMesa(mesaSelecionada.codseq);
-        
+
         // Remove a mesa do estado local imediatamente
-        setMesasAtivas(prev => 
+        setMesasAtivas(prev =>
           prev.filter(m => m.codseq !== mesaSelecionada.codseq)
         );
-        
+
         setModalDetalhes(false);
         setMesaSelecionada(null);
-        
+
         // Recarrega para garantir sincronização
         setTimeout(() => {
           fetchMesas(false);
@@ -150,7 +160,7 @@ export function MesasDashboard() {
   // NOVO: Função para fechar mesa vazia (aberta por engano)
   const handleFecharMesaVazia = async () => {
     if (!mesaSelecionada || !mesaSelecionada.codseq) return;
-    
+
     if (mesaSelecionada.quitens.length > 0) {
       alert('Esta mesa possui itens! Use a opção "Solicitar Conta" ou "Liberar Mesa".');
       return;
@@ -166,17 +176,17 @@ export function MesasDashboard() {
       setLoading(true);
       try {
         await liberarMesa(mesaSelecionada.codseq);
-        
+
         // Remove a mesa do estado local imediatamente
-        setMesasAtivas(prev => 
+        setMesasAtivas(prev =>
           prev.filter(m => m.codseq !== mesaSelecionada.codseq)
         );
-        
+
         setModalDetalhes(false);
         setMesaSelecionada(null);
-        
+
         alert('Mesa fechada com sucesso!');
-        
+
         // Recarrega para garantir sincronização
         setTimeout(() => {
           fetchMesas(false);
@@ -192,7 +202,9 @@ export function MesasDashboard() {
 
   const handleAbrirDetalhes = (mesa: Mesa) => {
     if (mesa.codseq === 0) {
-      handleAbrirMesa(mesa.num_quiosque!);
+      if (confirm(`Deseja abrir a Mesa ${mesa.num_quiosque}?`)) {
+        handleAbrirMesa(mesa.num_quiosque!);
+      }
     } else {
       setMesaSelecionada(mesa);
       setModalDetalhes(true);
@@ -200,17 +212,17 @@ export function MesasDashboard() {
   };
 
   const handleAbrirAdicionarItens = () => {
-    setModalAdicionar(true); 
+    setModalAdicionar(true);
   };
 
   const handleAbrirTransferir = () => {
-    setModalTransferir(true); 
+    setModalTransferir(true);
   };
 
   // Lógica de Geração das Mesas
   const mesasMapeadas = new Map(mesasAtivas.map(m => [m.num_quiosque, m]));
   const mesasCompletas: Mesa[] = [];
-  const mesasLivres: Mesa[] = []; 
+  const mesasLivres: Mesa[] = [];
 
   for (let i = 1; i <= TOTAL_MESAS; i++) {
     const ativa = mesasMapeadas.get(i);
@@ -243,7 +255,7 @@ export function MesasDashboard() {
     pagamento: mesasCompletas.filter(m => m.obs === 'PAGAMENTO').length,
   };
 
-  if (loading && mesasAtivas.length === 0) { 
+  if (loading && mesasAtivas.length === 0) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="animate-spin text-brand-blue-dark" size={48} />
@@ -265,7 +277,7 @@ export function MesasDashboard() {
       {/* Loading Indicator */}
       <AnimatePresence>
         {loading && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
@@ -293,21 +305,21 @@ export function MesasDashboard() {
 
           {/* Cards de Estatísticas */}
           <div className="flex space-x-3">
-            <motion.div 
+            <motion.div
               whileHover={{ scale: 1.05 }}
               className="bg-red-600 text-white px-4 py-2 rounded-xl shadow-lg"
             >
               <p className="text-xs font-bold uppercase">Ocupadas</p>
               <p className="text-2xl font-black">{stats.ocupadas}</p>
             </motion.div>
-            <motion.div 
+            <motion.div
               whileHover={{ scale: 1.05 }}
               className="bg-green-600 text-white px-4 py-2 rounded-xl shadow-lg"
             >
               <p className="text-xs font-bold uppercase">Livres</p>
               <p className="text-2xl font-black">{stats.livres}</p>
             </motion.div>
-            <motion.div 
+            <motion.div
               whileHover={{ scale: 1.05 }}
               className="bg-yellow-500 text-white px-4 py-2 rounded-xl shadow-lg"
             >
@@ -323,7 +335,7 @@ export function MesasDashboard() {
             <Filter size={20} />
             <span className="font-semibold">Filtrar:</span>
           </div>
-          
+
           <div className="flex flex-wrap gap-2">
             {filtros.map((filtro) => (
               <motion.button
@@ -351,7 +363,7 @@ export function MesasDashboard() {
       </div>
 
       {/* Grid de Mesas com Animação */}
-      <motion.div 
+      <motion.div
         layout
         className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5"
       >
@@ -398,16 +410,24 @@ export function MesasDashboard() {
             onClose={() => setModalAdicionar(false)}
             onItensAdd={async () => {
               setModalAdicionar(false);
-              
+
               // Recarrega as mesas primeiro
               await fetchMesas(false);
-              
+
               // Busca a mesa atualizada
               const mesasAtualizadas = await getMesasStatus();
+
+              if (!mesaSelecionada?.codseq) {
+                console.warn("Callback onItensAdd sem mesa selecionada.");
+                setModalDetalhes(false);
+                setMesaSelecionada(null);
+                return;
+              }
+
               const mesaAtualizada = mesasAtualizadas.find(m => m.codseq === mesaSelecionada.codseq);
-              
+
               if (mesaAtualizada) {
-                // Atualiza o estado local imediatamente
+                // Atualiza o estado local imediatamente (para o ModalDetalhes)
                 setMesasAtivas(mesasAtualizadas);
                 setMesaSelecionada(mesaAtualizada);
               } else {
@@ -418,7 +438,7 @@ export function MesasDashboard() {
             }}
           />
         )}
-        
+
         {modalTransferir && mesaSelecionada && (
           <ModalTransferirMesa
             mesa={mesaSelecionada}
@@ -428,7 +448,7 @@ export function MesasDashboard() {
               setModalTransferir(false);
               setModalDetalhes(false);
               setMesaSelecionada(null);
-              
+
               // Recarrega e atualiza o estado imediatamente
               await fetchMesas(false);
             }}
