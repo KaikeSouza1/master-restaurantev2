@@ -1,6 +1,7 @@
 // packages/frontend/src/pages/MesasDashboard.tsx
 
 import { useState, useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import {
   getMesasStatus,
   abrirMesa,
@@ -12,6 +13,7 @@ import { MesaCardDashboard } from '../components/MesaCardDashboard';
 import { ModalDetalhesMesa } from '../components/ModalDetalhesMesa';
 import { ModalAdicionarItens } from '../components/ModalAdicionarItens';
 import { ModalTransferirMesa } from '../components/ModalTransferirMesa';
+import { ModalConfirmacao } from '../components/ModalConfirmacao'; // Importado
 import { Loader2, AlertTriangle, LayoutGrid, Filter } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -19,11 +21,31 @@ const TOTAL_MESAS = 20;
 
 type FiltroStatus = 'TODAS' | 'LIVRE' | 'OCUPADA' | 'PAGAMENTO';
 
-const filtros: { label: string; valor: FiltroStatus; icon: string; cor: string }[] = [
+const filtros: {
+  label: string;
+  valor: FiltroStatus;
+  icon: string;
+  cor: string;
+}[] = [
   { label: 'Todas', valor: 'TODAS', icon: '🏠', cor: 'from-zinc-500 to-zinc-600' },
-  { label: 'Ocupadas', valor: 'OCUPADA', icon: '🔴', cor: 'from-red-600 to-red-700' },
-  { label: 'Livres', valor: 'LIVRE', icon: '✅', cor: 'from-green-500 to-green-600' },
-  { label: 'Pagamento', valor: 'PAGAMENTO', icon: '💳', cor: 'from-yellow-500 to-amber-600' },
+  {
+    label: 'Ocupadas',
+    valor: 'OCUPADA',
+    icon: '🔴',
+    cor: 'from-red-600 to-red-700',
+  },
+  {
+    label: 'Livres',
+    valor: 'LIVRE',
+    icon: '✅',
+    cor: 'from-green-500 to-green-600',
+  },
+  {
+    label: 'Pagamento',
+    valor: 'PAGAMENTO',
+    icon: '💳',
+    cor: 'from-yellow-500 to-amber-600',
+  },
 ];
 
 export function MesasDashboard() {
@@ -38,6 +60,25 @@ export function MesasDashboard() {
 
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('TODAS');
 
+  const [isConfirmLoading, setIsConfirmLoading] = useState(false);
+  const [confirmModalProps, setConfirmModalProps] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: React.ReactNode;
+    onConfirm: () => Promise<void>;
+    variant?: 'danger' | 'success' | 'default';
+  } | null>(null);
+
+  // Função helper para abrir o modal de confirmação
+  const askForConfirmation = (
+    title: string,
+    message: React.ReactNode,
+    onConfirm: () => Promise<void>,
+    variant: 'danger' | 'success' | 'default' = 'default',
+  ) => {
+    setConfirmModalProps({ isOpen: true, title, message, onConfirm, variant });
+  };
+
   const fetchMesas = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
@@ -46,6 +87,7 @@ export function MesasDashboard() {
     } catch (err) {
       setError('Falha ao carregar o status das mesas.');
       console.error(err);
+      toast.error('Falha ao carregar o status das mesas.');
     } finally {
       if (showLoading) setLoading(false);
     }
@@ -62,28 +104,44 @@ export function MesasDashboard() {
     setLoading(true);
     setError(null);
 
+    const promise = abrirMesa(numMesa);
+
+    toast.promise(promise, {
+      loading: `Abrindo mesa ${numMesa}...`,
+      success: (novaMesaApi) => {
+        const novaMesaSegura: Mesa = {
+          ...novaMesaApi,
+          quitens: novaMesaApi.quitens || [],
+        };
+
+        setMesasAtivas((prev) => {
+          const mesasAtualizadas = prev.filter(
+            (m) => m.num_quiosque !== numMesa,
+          );
+          return [...mesasAtualizadas, novaMesaSegura];
+        });
+
+        setMesaSelecionada(novaMesaSegura);
+        setModalDetalhes(true);
+
+        setTimeout(() => {
+          fetchMesas(false);
+        }, 500);
+
+        return `Mesa ${numMesa} aberta!`;
+      },
+      error: (err: any) => {
+        console.error('Erro ao abrir mesa:', err);
+        return `Erro ao abrir mesa: ${
+          err.response?.data?.message || err.message
+        }`;
+      },
+    });
+
     try {
-      const novaMesaApi = await abrirMesa(numMesa);
-      
-      const novaMesaSegura: Mesa = { 
-        ...novaMesaApi, 
-        quitens: novaMesaApi.quitens || [],
-      };
-
-      setMesasAtivas(prev => {
-        const mesasAtualizadas = prev.filter(m => m.num_quiosque !== numMesa);
-        return [...mesasAtualizadas, novaMesaSegura];
-      });
-
-      setMesaSelecionada(novaMesaSegura);
-      setModalDetalhes(true); 
-
-      setTimeout(() => {
-        fetchMesas(false);
-      }, 500);
-    } catch (err: any) {
-      console.error('Erro ao abrir mesa:', err);
-      alert(`Erro ao abrir mesa: ${err.response?.data?.message || err.message}`);
+      await promise;
+    } catch (err) {
+      // O toast.promise já cuida do erro
     } finally {
       setLoading(false);
     }
@@ -92,119 +150,174 @@ export function MesasDashboard() {
   const handleSolicitarFechamento = async () => {
     if (!mesaSelecionada || !mesaSelecionada.codseq) return;
 
-    if (confirm(`Solicitar fechamento da Mesa ${mesaSelecionada.num_quiosque}?`)) {
+    const codseq = mesaSelecionada.codseq;
+
+    const onConfirm = async () => {
       setLoading(true);
+      const promise = solicitarFechamento(codseq);
+
+      toast.promise(promise, {
+        loading: 'Solicitando fechamento...',
+        success: (mesaAtualizadaApi) => {
+          setMesaSelecionada((mesaAntiga) => {
+            if (!mesaAntiga) return null;
+            const mesaSegura: Mesa = {
+              ...mesaAntiga,
+              ...mesaAtualizadaApi,
+              quitens: mesaAntiga.quitens || [],
+            };
+            setMesasAtivas((prev) =>
+              prev.map((m) =>
+                m.codseq === mesaSegura.codseq ? mesaSegura : m,
+              ),
+            );
+            return mesaSegura;
+          });
+          fetchMesas(false);
+          return 'Conta solicitada!';
+        },
+        error: (err: any) =>
+          `Erro: ${err.response?.data?.message || err.message}`,
+      });
+
       try {
-        const mesaAtualizadaApi = await solicitarFechamento(mesaSelecionada.codseq);
-
-        // *** A CORREÇÃO ESTÁ AQUI ***
-        // Nós mesclamos a mesa ATUAL (que tem os itens) com a resposta da API (que tem o novo status)
-        const mesaSegura: Mesa = {
-          ...mesaSelecionada,       // 1. Base: A mesa atual com todos os itens
-          ...mesaAtualizadaApi,     // 2. Sobrescreve: O novo status (ex: obs: 'PAGAMENTO')
-          quitens: mesaSelecionada.quitens || [], // 3. Garantia final de que os itens existem
-        };
-
-        // Atualiza o estado local imediatamente com o objeto seguro
-        setMesasAtivas(prev =>
-          prev.map(m => m.codseq === mesaSegura.codseq ? mesaSegura : m)
-        );
-
-        setMesaSelecionada(mesaSegura); // <-- Atualiza o modal com o objeto seguro (e com itens)
-
-        // Recarrega para garantir sincronização
-        await fetchMesas(false);
-      } catch (err: any) {
-        alert(`Erro: ${err.response?.data?.message || err.message}`);
+        await promise;
+      } catch (err) {
+        // Erro tratado
       } finally {
         setLoading(false);
       }
-    }
+    };
+
+    askForConfirmation(
+      'Solicitar Conta?',
+      `Confirmar a solicitação de fechamento da Mesa ${mesaSelecionada.num_quiosque}?`,
+      onConfirm,
+      'success',
+    );
   };
 
   const handleLiberarMesa = async () => {
     if (!mesaSelecionada || !mesaSelecionada.codseq) return;
 
-    const confirmMessage = `
-    FINALIZAR PEDIDO #${mesaSelecionada.codseq} (Mesa ${mesaSelecionada.num_quiosque})?
+    const codseq = mesaSelecionada.codseq;
+    const numQuiosque = mesaSelecionada.num_quiosque;
 
-    Este é o número que você usará no seu Emissor NFCe.
-    `;
-
-    if (confirm(confirmMessage)) {
+    const onConfirm = async () => {
       setLoading(true);
+      const promise = liberarMesa(codseq);
+
+      toast.promise(promise, {
+        loading: 'Finalizando pedido...',
+        success: () => {
+          setMesasAtivas((prev) => prev.filter((m) => m.codseq !== codseq));
+          setModalDetalhes(false);
+          setMesaSelecionada(null);
+          setTimeout(() => {
+            fetchMesas(false);
+          }, 500);
+          return 'Mesa finalizada com sucesso!';
+        },
+        error: (err: any) => {
+          console.error('Erro ao liberar mesa:', err);
+          return `Erro: ${err.response?.data?.message || err.message}`;
+        },
+      });
+
       try {
-        await liberarMesa(mesaSelecionada.codseq);
-
-        // Remove a mesa do estado local imediatamente
-        setMesasAtivas(prev =>
-          prev.filter(m => m.codseq !== mesaSelecionada.codseq)
-        );
-
-        setModalDetalhes(false);
-        setMesaSelecionada(null);
-
-        // Recarrega para garantir sincronização
-        setTimeout(() => {
-          fetchMesas(false);
-        }, 500);
-      } catch (err: any) {
-        console.error('Erro ao liberar mesa:', err);
-        alert(`Erro: ${err.response?.data?.message || err.message}`);
+        await promise;
+      } catch (err) {
+        // Erro tratado
       } finally {
         setLoading(false);
       }
-    }
+    };
+
+    // ==========================================================
+    // <-- ÚNICA ALTERAÇÃO AQUI
+    // Mensagem de confirmação mais explícita para o NFCe
+    // ==========================================================
+    askForConfirmation(
+      `Finalizar Pedido (NFCe)?`, // Título atualizado
+      <div className="space-y-3">
+        <p>Confirmar a finalização da Mesa {numQuiosque}?</p>
+
+        {/* Bloco destacado */}
+        <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-3 text-center">
+          <p className="font-semibold text-yellow-900">
+            Para finalizar no Emissor NFCe, utilize o Pedido Nº:
+          </p>
+          <p className="text-3xl font-black text-yellow-900 mt-1">
+            {codseq}
+          </p>
+        </div>
+      </div>,
+      onConfirm,
+      'danger',
+    );
   };
 
-  // NOVO: Função para fechar mesa vazia (aberta por engano)
   const handleFecharMesaVazia = async () => {
     if (!mesaSelecionada || !mesaSelecionada.codseq) return;
 
     if (mesaSelecionada.quitens.length > 0) {
-      alert('Esta mesa possui itens! Use a opção "Solicitar Conta" ou "Liberar Mesa".');
+      toast.error(
+        'Esta mesa possui itens! Use a opção "Solicitar Conta" ou "Liberar Mesa".',
+      );
       return;
     }
 
-    const confirmMessage = `
-    FECHAR MESA ${mesaSelecionada.num_quiosque} sem itens?
-    
-    Use esta opção apenas se a mesa foi aberta por engano ou para teste.
-    `;
+    const codseq = mesaSelecionada.codseq;
+    const numQuiosque = mesaSelecionada.num_quiosque;
 
-    if (confirm(confirmMessage)) {
+    const onConfirm = async () => {
       setLoading(true);
+      const promise = liberarMesa(codseq);
+
+      toast.promise(promise, {
+        loading: 'Fechando mesa vazia...',
+        success: () => {
+          setMesasAtivas((prev) => prev.filter((m) => m.codseq !== codseq));
+          setModalDetalhes(false);
+          setMesaSelecionada(null);
+          setTimeout(() => {
+            fetchMesas(false);
+          }, 500);
+          return 'Mesa fechada com sucesso!';
+        },
+        error: (err: any) => {
+          console.error('Erro ao fechar mesa:', err);
+          return `Erro: ${err.response?.data?.message || err.message}`;
+        },
+      });
+
       try {
-        await liberarMesa(mesaSelecionada.codseq);
-
-        // Remove a mesa do estado local imediatamente
-        setMesasAtivas(prev =>
-          prev.filter(m => m.codseq !== mesaSelecionada.codseq)
-        );
-
-        setModalDetalhes(false);
-        setMesaSelecionada(null);
-
-        alert('Mesa fechada com sucesso!');
-
-        // Recarrega para garantir sincronização
-        setTimeout(() => {
-          fetchMesas(false);
-        }, 500);
-      } catch (err: any) {
-        console.error('Erro ao fechar mesa:', err);
-        alert(`Erro: ${err.response?.data?.message || err.message}`);
+        await promise;
+      } catch (err) {
+        // Erro tratado
       } finally {
         setLoading(false);
       }
-    }
+    };
+
+    askForConfirmation(
+      `Fechar Mesa ${numQuiosque}?`,
+      <p>
+        Use esta opção apenas se a mesa foi aberta por engano ou para teste.
+      </p>,
+      onConfirm,
+      'danger',
+    );
   };
 
   const handleAbrirDetalhes = (mesa: Mesa) => {
     if (mesa.codseq === 0) {
-      if (confirm(`Deseja abrir a Mesa ${mesa.num_quiosque}?`)) {
-        handleAbrirMesa(mesa.num_quiosque!);
-      }
+      askForConfirmation(
+        `Abrir Mesa ${mesa.num_quiosque}?`,
+        'Você confirma a abertura desta mesa?',
+        () => handleAbrirMesa(mesa.num_quiosque!),
+        'success',
+      );
     } else {
       setMesaSelecionada(mesa);
       setModalDetalhes(true);
@@ -220,7 +333,9 @@ export function MesasDashboard() {
   };
 
   // Lógica de Geração das Mesas
-  const mesasMapeadas = new Map(mesasAtivas.map(m => [m.num_quiosque, m]));
+  const mesasMapeadas = new Map(
+    mesasAtivas.map((m) => [m.num_quiosque, m]),
+  );
   const mesasCompletas: Mesa[] = [];
   const mesasLivres: Mesa[] = [];
 
@@ -230,9 +345,17 @@ export function MesasDashboard() {
       mesasCompletas.push(ativa);
     } else {
       const livre: Mesa = {
-        codseq: 0, num_quiosque: i, tipo: 'M', vda_finalizada: 'N', obs: 'LIVRE',
-        data_hora_abertura: '', sub_total_geral: 0, total: 0, quitens: [],
-        nome_cli_esp: null, fone_esp: null,
+        codseq: 0,
+        num_quiosque: i,
+        tipo: 'M',
+        vda_finalizada: 'N',
+        obs: 'LIVRE',
+        data_hora_abertura: '',
+        sub_total_geral: 0,
+        total: 0,
+        quitens: [],
+        nome_cli_esp: null,
+        fone_esp: null,
       };
       mesasCompletas.push(livre);
       mesasLivres.push(livre);
@@ -242,7 +365,8 @@ export function MesasDashboard() {
   const mesasFiltradas = mesasCompletas.filter((mesa) => {
     if (filtroStatus === 'TODAS') return true;
     if (filtroStatus === 'LIVRE') return mesa.codseq === 0;
-    if (filtroStatus === 'OCUPADA') return (mesa.codseq !== 0 && mesa.obs !== 'PAGAMENTO');
+    if (filtroStatus === 'OCUPADA')
+      return mesa.codseq !== 0 && mesa.obs !== 'PAGAMENTO';
     if (filtroStatus === 'PAGAMENTO') return mesa.obs === 'PAGAMENTO';
     return true;
   });
@@ -250,9 +374,11 @@ export function MesasDashboard() {
   // Estatísticas
   const stats = {
     total: mesasCompletas.length,
-    ocupadas: mesasCompletas.filter(m => m.codseq !== 0 && m.obs !== 'PAGAMENTO').length,
-    livres: mesasCompletas.filter(m => m.codseq === 0).length,
-    pagamento: mesasCompletas.filter(m => m.obs === 'PAGAMENTO').length,
+    ocupadas: mesasCompletas.filter(
+      (m) => m.codseq !== 0 && m.obs !== 'PAGAMENTO',
+    ).length,
+    livres: mesasCompletas.filter((m) => m.codseq === 0).length,
+    pagamento: mesasCompletas.filter((m) => m.obs === 'PAGAMENTO').length,
   };
 
   if (loading && mesasAtivas.length === 0) {
@@ -267,7 +393,9 @@ export function MesasDashboard() {
     return (
       <div className="flex items-center justify-center p-10 bg-red-100 rounded-lg shadow-lg">
         <AlertTriangle size={24} className="text-red-600 mr-3" />
-        <p className="text-red-700">Erro: {error}. Tente recarregar a página.</p>
+        <p className="text-red-700">
+          Erro: {error}. Tente recarregar a página.
+        </p>
       </div>
     );
   }
@@ -276,7 +404,7 @@ export function MesasDashboard() {
     <div className="space-y-6">
       {/* Loading Indicator */}
       <AnimatePresence>
-        {loading && (
+        {loading && !isConfirmLoading && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -303,7 +431,6 @@ export function MesasDashboard() {
             </div>
           </div>
 
-          {/* Cards de Estatísticas */}
           <div className="flex space-x-3">
             <motion.div
               whileHover={{ scale: 1.05 }}
@@ -392,6 +519,7 @@ export function MesasDashboard() {
 
       {/* Modais */}
       <AnimatePresence>
+        {/* Modal de Detalhes */}
         {modalDetalhes && mesaSelecionada && (
           <ModalDetalhesMesa
             mesa={mesaSelecionada}
@@ -404,34 +532,28 @@ export function MesasDashboard() {
           />
         )}
 
+        {/* Modal de Adicionar Itens */}
         {modalAdicionar && mesaSelecionada && (
           <ModalAdicionarItens
             mesa={mesaSelecionada}
             onClose={() => setModalAdicionar(false)}
             onItensAdd={async () => {
               setModalAdicionar(false);
-
-              // Recarrega as mesas primeiro
               await fetchMesas(false);
-
-              // Busca a mesa atualizada
               const mesasAtualizadas = await getMesasStatus();
-
               if (!mesaSelecionada?.codseq) {
-                console.warn("Callback onItensAdd sem mesa selecionada.");
+                console.warn('Callback onItensAdd sem mesa selecionada.');
                 setModalDetalhes(false);
                 setMesaSelecionada(null);
                 return;
               }
-
-              const mesaAtualizada = mesasAtualizadas.find(m => m.codseq === mesaSelecionada.codseq);
-
+              const mesaAtualizada = mesasAtualizadas.find(
+                (m) => m.codseq === mesaSelecionada.codseq,
+              );
               if (mesaAtualizada) {
-                // Atualiza o estado local imediatamente (para o ModalDetalhes)
                 setMesasAtivas(mesasAtualizadas);
                 setMesaSelecionada(mesaAtualizada);
               } else {
-                // Mesa foi fechada, fecha o modal de detalhes
                 setModalDetalhes(false);
                 setMesaSelecionada(null);
               }
@@ -439,6 +561,7 @@ export function MesasDashboard() {
           />
         )}
 
+        {/* Modal de Transferir Mesa */}
         {modalTransferir && mesaSelecionada && (
           <ModalTransferirMesa
             mesa={mesaSelecionada}
@@ -448,9 +571,31 @@ export function MesasDashboard() {
               setModalTransferir(false);
               setModalDetalhes(false);
               setMesaSelecionada(null);
-
-              // Recarrega e atualiza o estado imediatamente
               await fetchMesas(false);
+            }}
+          />
+        )}
+
+        {/* Modal de Confirmação (NOVO) */}
+        {confirmModalProps?.isOpen && (
+          <ModalConfirmacao
+            isOpen={true}
+            title={confirmModalProps.title}
+            message={confirmModalProps.message}
+            variant={confirmModalProps.variant}
+            isLoading={isConfirmLoading}
+            onClose={() => setConfirmModalProps(null)}
+            onConfirm={async () => {
+              setIsConfirmLoading(true);
+              try {
+                await confirmModalProps.onConfirm();
+              } catch (e) {
+                console.error('Erro ao executar confirmação:', e);
+                toast.error('Ocorreu um erro inesperado.');
+              } finally {
+                setIsConfirmLoading(false);
+                setConfirmModalProps(null);
+              }
             }}
           />
         )}

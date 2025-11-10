@@ -1,8 +1,16 @@
 // packages/frontend/src/components/MesaCardDashboard.tsx
 
 import type { Mesa } from '../types';
-import { formatCurrency, getMesaStatus } from '../utils/helpers';
-import { PlusCircle, Clock, Users, ChefHat, CreditCard, Sparkles } from 'lucide-react';
+// 1. IMPORTAR A FUNÇÃO CORRETA E O ÍCONE
+import { formatCurrency, getMesaStatus, getTempoDecorrido } from '../utils/helpers'; 
+import {
+  PlusCircle,
+  Clock, // <-- Importar o Clock
+  Users,
+  ChefHat,
+  CreditCard,
+  Sparkles,
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface MesaCardProps {
@@ -17,12 +25,12 @@ export function MesaCardDashboard({ mesa, onClick }: MesaCardProps) {
   const cardVariants = {
     hidden: { opacity: 0, scale: 0.9 },
     visible: { opacity: 1, scale: 1 },
-    hover: { 
-      scale: 1.05, 
+    hover: {
+      scale: 1.05,
       y: -8,
-      transition: { duration: 0.2 }
+      transition: { duration: 0.2 },
     },
-    tap: { scale: 0.95 }
+    tap: { scale: 0.95 },
   };
 
   if (isLivre) {
@@ -38,10 +46,14 @@ export function MesaCardDashboard({ mesa, onClick }: MesaCardProps) {
       >
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity">
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)',
-            backgroundSize: '20px 20px'
-          }}></div>
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage:
+                'radial-gradient(circle, currentColor 1px, transparent 1px)',
+              backgroundSize: '20px 20px',
+            }}
+          ></div>
         </div>
 
         {/* Content */}
@@ -52,7 +64,9 @@ export function MesaCardDashboard({ mesa, onClick }: MesaCardProps) {
           >
             <PlusCircle size={48} strokeWidth={1.5} />
           </motion.div>
-          <span className="text-3xl font-extrabold mt-4 tracking-tight">Mesa {mesa.num_quiosque}</span>
+          <span className="text-3xl font-extrabold mt-4 tracking-tight">
+            Mesa {mesa.num_quiosque}
+          </span>
           <span className="font-semibold text-sm mt-2 px-3 py-1 bg-white/50 rounded-full">
             Disponível
           </span>
@@ -67,9 +81,11 @@ export function MesaCardDashboard({ mesa, onClick }: MesaCardProps) {
   // Cards para mesas OCUPADAS ou em PAGAMENTO
   const isPagamento = status === 'PAGAMENTO';
   const numItens = mesa.quitens.length;
-  
+  // 2. CHAMAR A FUNÇÃO DE TEMPO DECORRIDO
+  const tempoDecorrido = getTempoDecorrido(mesa.data_hora_abertura);
+
   // Gradientes dinâmicos por status
-  const gradientClass = isPagamento 
+  const gradientClass = isPagamento
     ? 'from-yellow-500 via-yellow-600 to-amber-600'
     : 'from-red-600 via-red-700 to-rose-800';
 
@@ -85,24 +101,28 @@ export function MesaCardDashboard({ mesa, onClick }: MesaCardProps) {
     >
       {/* Animated Background Pattern */}
       <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0" style={{
-          backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px)'
-        }}></div>
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px)',
+          }}
+        ></div>
       </div>
 
       {/* Status Badge - Floating */}
       <div className="absolute top-3 right-3 z-20">
-        <motion.div 
-          animate={{ 
+        <motion.div
+          animate={{
             scale: isPagamento ? [1, 1.1, 1] : 1,
           }}
-          transition={{ 
+          transition={{
             repeat: isPagamento ? Infinity : 0,
-            duration: 2 
+            duration: 2,
           }}
           className={`flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-bold shadow-lg backdrop-blur-sm ${
-            isPagamento 
-              ? 'bg-white/95 text-yellow-700 ring-2 ring-yellow-300' 
+            isPagamento
+              ? 'bg-white/95 text-yellow-700 ring-2 ring-yellow-300'
               : 'bg-white/90 text-red-700'
           }`}
         >
@@ -122,27 +142,38 @@ export function MesaCardDashboard({ mesa, onClick }: MesaCardProps) {
 
       {/* Content Container */}
       <div className="relative z-10 p-4 flex flex-col h-full justify-between">
-        
         {/* Header - Número da Mesa */}
         <div>
-          <div className="flex items-center space-x-2 mb-2">
-            <span className="text-white/70 text-xs font-bold uppercase tracking-wider">
-              Mesa
-            </span>
-            <motion.span 
-              className="text-4xl font-black text-white drop-shadow-lg"
-              whileHover={{ scale: 1.1 }}
-            >
-              {mesa.num_quiosque}
-            </motion.span>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-2">
+              <span className="text-white/70 text-xs font-bold uppercase tracking-wider">
+                Mesa
+              </span>
+              <motion.span
+                className="text-4xl font-black text-white drop-shadow-lg"
+                whileHover={{ scale: 1.1 }}
+              >
+                {mesa.num_quiosque}
+              </motion.span>
+            </div>
           </div>
-          
-          {/* Info - Itens */}
-          <div className="flex items-center space-x-1 bg-black/20 px-2 py-1 rounded-full w-fit">
-            <Users size={12} className="text-white/90" />
-            <span className="font-semibold text-white/90 text-xs">
-              {numItens} {numItens === 1 ? 'item' : 'itens'}
-            </span>
+
+          {/* 3. ADICIONAR O TEMPO DECORRIDO E ITENS AQUI */}
+          <div className="flex items-center space-x-2">
+            {/* Info - Itens */}
+            <div className="flex items-center space-x-1 bg-black/20 px-2 py-1 rounded-full w-fit">
+              <Users size={12} className="text-white/90" />
+              <span className="font-semibold text-white/90 text-xs">
+                {numItens} {numItens === 1 ? 'item' : 'itens'}
+              </span>
+            </div>
+            {/* Info - Tempo Decorrido */}
+            <div className="flex items-center space-x-1 bg-black/20 px-2 py-1 rounded-full w-fit">
+              <Clock size={12} className="text-white/90" />
+              <span className="font-semibold text-white/90 text-xs">
+                {tempoDecorrido}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -152,7 +183,7 @@ export function MesaCardDashboard({ mesa, onClick }: MesaCardProps) {
             <span className="text-white/70 text-xs font-bold uppercase tracking-wide">
               Total
             </span>
-            <motion.span 
+            <motion.span
               className="text-2xl font-black text-white drop-shadow-lg"
               whileHover={{ scale: 1.05 }}
             >
@@ -163,7 +194,7 @@ export function MesaCardDashboard({ mesa, onClick }: MesaCardProps) {
       </div>
 
       {/* Hover Shine Effect */}
-      <motion.div 
+      <motion.div
         className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
         style={{ transform: 'translateX(-100%)' }}
         whileHover={{ x: '200%' }}

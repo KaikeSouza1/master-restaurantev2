@@ -9,6 +9,8 @@ import { MesasDashboard } from './pages/MesasDashboard';
 import { KDS } from './pages/KDS';
 import { AdminGuard } from './components/AdminGuard';
 import { AdminLayout } from './components/AdminLayout';
+// 1. IMPORTAR O NOVO COMPONENTE
+import { HistoricoPedidos } from './pages/HistoricoPedidos';
 
 export default function App() {
   return (
@@ -17,7 +19,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/registrar" element={<RegisterPage />} />
       <Route path="/cardapio" element={<CardapioPage />} />
-      
+
       {/* Rota raiz */}
       <Route path="/" element={<Navigate to="/cardapio" replace />} />
 
@@ -32,9 +34,12 @@ export default function App() {
           />
           <Route path="/admin/mesas" element={<MesasDashboard />} />
           <Route path="/admin/kds" element={<KDS />} />
+
+          {/* 2. ADICIONAR A NOVA ROTA AQUI */}
+          <Route path="/admin/historico" element={<HistoricoPedidos />} />
         </Route>
       </Route>
-      
+
       {/* Rota de fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
