@@ -25,6 +25,7 @@ interface ModalProps {
   onTransferir: () => void;
   onFecharConta: () => void;
   onFinalizarMesa: () => void;
+  onFecharMesaVazia: () => void; // NOVO: Função para fechar mesa sem itens
 }
 
 export function ModalDetalhesMesa({
@@ -34,10 +35,12 @@ export function ModalDetalhesMesa({
   onTransferir,
   onFecharConta,
   onFinalizarMesa,
+  onFecharMesaVazia, // NOVO
 }: ModalProps) {
   const status = (mesa.obs || 'NOVO').toUpperCase();
   const isPagamento = status === 'PAGAMENTO';
   const observacaoAtual = (mesa.obs !== 'PAGAMENTO' && mesa.obs !== 'NOVO' ? mesa.obs : '') || '';
+  const mesaVazia = mesa.quitens.length === 0; // NOVO: Verifica se a mesa está vazia
 
   const statusConfig = isPagamento 
     ? { bg: 'bg-gradient-to-r from-yellow-500 to-amber-600', text: 'Aguardando Pagamento', icon: DollarSign }
@@ -91,7 +94,17 @@ export function ModalDetalhesMesa({
               <div className="flex items-center space-x-4 text-sm text-white/90 bg-black/20 backdrop-blur-sm px-3 py-2 rounded-lg inline-flex">
                 <div className="flex items-center space-x-1">
                   <Clock size={16} />
-                  <span className="font-semibold">Aberto às {formatTimeFromISO(mesa.data_hora_abertura)}</span>
+                  <span className="font-semibold">
+                    {mesa.data_hora_abertura 
+                      ? new Date(mesa.data_hora_abertura).toLocaleString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })
+                      : 'Agora'
+                    }
+                  </span>
                 </div>
                 <span>•</span>
                 <div className="flex items-center space-x-1">
@@ -231,6 +244,19 @@ export function ModalDetalhesMesa({
               </>
             ) : (
               <>
+                {/* NOVO: Botão de Fechar Mesa Vazia */}
+                {mesaVazia && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={onFecharMesaVazia}
+                    className="col-span-2 bg-gradient-to-r from-orange-500 to-red-600 text-white py-4 rounded-xl font-bold hover:shadow-xl transition-all flex items-center justify-center space-x-2"
+                  >
+                    <X size={20} />
+                    <span>Fechar Mesa (Aberta por Engano)</span>
+                  </motion.button>
+                )}
+
                 <motion.button
                   whileHover={{ scale: 1.02, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)" }}
                   whileTap={{ scale: 0.98 }}

@@ -1,18 +1,17 @@
-// master-restaurante-v2/packages/frontend/src/components/ModalTransferirMesa.tsx
+// packages/frontend/src/components/ModalTransferirMesa.tsx
 
 import { useState } from 'react';
 import ReactModal from 'react-modal';
 import { motion } from 'framer-motion';
-// CORREÇÃO TS1484: Usando 'import type'
 import type { Mesa } from '../types'; 
 import { transferirMesa } from '../services/api';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 
 interface ModalProps {
   mesa: Mesa;
-  mesasLivres: Mesa[]; // Lista de mesas que não estão ocupadas (codseq === 0)
+  mesasLivres: Mesa[];
   onClose: () => void;
-  onTransferido: () => void; // Função para recarregar as mesas
+  onTransferido: () => void;
 }
 
 export function ModalTransferirMesa({
@@ -48,10 +47,15 @@ export function ModalTransferirMesa({
 
     try {
       await transferirMesa(mesa.codseq, numDestino);
-      alert(
-        `Mesa ${mesa.num_quiosque} transferida com sucesso para a Mesa ${numDestino}!`,
-      );
-      onTransferido(); // Recarrega as mesas na dashboard
+      
+      // Pequeno delay para garantir que o backend processou
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Chama o callback de sucesso
+      onTransferido();
+      
+      // Fecha o modal
+      onClose();
     } catch (err: any) {
       console.error(err);
       setError(err.response?.data?.message || 'Erro ao transferir mesa. Verifique se a mesa de destino está realmente livre.');
@@ -68,34 +72,34 @@ export function ModalTransferirMesa({
     <ReactModal
       isOpen={true}
       onRequestClose={onClose}
-      // CORREÇÃO: Prop para evitar o warning
       appElement={document.getElementById('root') || undefined} 
-      className="Modal bg-white w-full max-w-md mx-auto my-auto rounded-xl shadow-2xl overflow-hidden"
-      overlayClassName="Overlay fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+      className="Modal bg-white w-full max-w-md mx-auto my-auto rounded-2xl shadow-2xl overflow-hidden"
+      overlayClassName="Overlay fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
     >
       <motion.div
-        initial={{ y: -50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: -50, opacity: 0 }}
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <div className="flex justify-between items-center p-5 border-b bg-brand-blue-dark text-white">
+        <div className="flex justify-between items-center p-6 border-b bg-gradient-to-r from-brand-blue-dark to-brand-blue-light text-white rounded-t-2xl">
           <h2 className="text-2xl font-bold flex items-center space-x-2">
             <ArrowRight size={24} />
             <span>Transferir Mesa {mesa.num_quiosque}</span>
           </h2>
           <button
             onClick={onClose}
-            className="text-2xl font-bold transition-transform hover:rotate-90"
+            disabled={loading}
+            className="text-2xl font-bold transition-transform hover:rotate-90 hover:scale-110 disabled:opacity-50"
           >
             &times;
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className='p-3 bg-brand-gray-light rounded-lg'>
-             <p className="text-zinc-700 font-medium">
-                Transferindo Pedido <span className='font-bold'>#{mesa.codseq}</span> de <span className='font-bold text-lg text-red-600'>Mesa {mesa.num_quiosque}</span>.
+          <div className='p-4 bg-blue-50 rounded-xl border border-blue-200'>
+            <p className="text-zinc-700 font-medium text-center">
+              Transferindo Pedido <span className='font-bold text-brand-blue-dark'>#{mesa.codseq}</span> de <span className='font-bold text-lg text-red-600'>Mesa {mesa.num_quiosque}</span>.
             </p>
           </div>
 
@@ -113,9 +117,10 @@ export function ModalTransferirMesa({
                 setNumMesaDestino(e.target.value);
                 setError(null);
               }}
-              className="w-full p-3 border border-brand-gray-mid rounded-lg text-lg font-bold bg-white focus:ring-brand-blue-light focus:border-brand-blue-light"
+              className="w-full p-3 border-2 border-brand-gray-mid rounded-xl text-lg font-bold bg-white focus:ring-2 focus:ring-brand-blue-light focus:border-brand-blue-light transition-all"
               required
               autoFocus
+              disabled={loading}
             >
               <option value="">-- Selecione uma Mesa --</option>
               {mesasDisponiveis.map((m) => (
@@ -125,14 +130,18 @@ export function ModalTransferirMesa({
               ))}
             </select>
             {mesasDisponiveis.length === 0 && (
-                 <p className="text-sm text-red-500 mt-2">Nenhuma mesa livre disponível.</p>
+              <p className="text-sm text-red-500 mt-2">Nenhuma mesa livre disponível.</p>
             )}
           </div>
 
           {error && (
-            <div className="p-3 bg-red-100 border border-red-300 text-red-600 rounded-lg text-center font-medium">
-                {error}
-            </div>
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-3 bg-red-100 border border-red-300 text-red-600 rounded-xl text-center font-medium"
+            >
+              {error}
+            </motion.div>
           )}
 
           <div className="flex justify-end space-x-3 pt-2">
@@ -140,17 +149,29 @@ export function ModalTransferirMesa({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="bg-zinc-300 text-zinc-800 px-6 py-3 rounded-lg font-bold hover:bg-zinc-400 transition-all"
+              className="bg-zinc-300 text-zinc-800 px-6 py-3 rounded-xl font-bold hover:bg-zinc-400 transition-all disabled:opacity-50"
             >
               Cancelar
             </button>
-            <button
+            <motion.button
               type="submit"
               disabled={loading || mesasDisponiveis.length === 0}
-              className="bg-brand-blue-light text-white px-6 py-3 rounded-lg font-bold text-lg hover:bg-brand-blue-dark transition-all disabled:opacity-50 disabled:bg-zinc-400"
+              whileHover={{ scale: loading ? 1 : 1.02 }}
+              whileTap={{ scale: loading ? 1 : 0.98 }}
+              className="bg-gradient-to-r from-brand-blue-light to-brand-blue-dark text-white px-6 py-3 rounded-xl font-bold text-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:bg-zinc-400 flex items-center space-x-2"
             >
-              {loading ? 'Transferindo...' : 'Transferir Pedido'}
-            </button>
+              {loading ? (
+                <>
+                  <Loader2 className="animate-spin" size={20} />
+                  <span>Transferindo...</span>
+                </>
+              ) : (
+                <>
+                  <ArrowRight size={20} />
+                  <span>Transferir Pedido</span>
+                </>
+              )}
+            </motion.button>
           </div>
         </form>
       </motion.div>

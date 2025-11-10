@@ -60,6 +60,8 @@ export function MesasDashboard() {
   const handleAbrirMesa = async (numMesa: number) => {
     if (loading) return;
     setLoading(true);
+    setError(null);
+    
     try {
       const novaMesa = await abrirMesa(numMesa);
       
@@ -73,8 +75,12 @@ export function MesasDashboard() {
       setModalDetalhes(true);
       
       // Recarrega para garantir sincronização
-      await fetchMesas(false);
+      setTimeout(() => {
+        fetchMesas(false);
+      }, 500);
     } catch (err: any) {
+      console.error('Erro ao abrir mesa:', err);
+      setError(err.response?.data?.message || 'Erro ao abrir mesa');
       alert(`Erro ao abrir mesa: ${err.response?.data?.message || err.message}`);
     } finally {
       setLoading(false);
@@ -129,8 +135,54 @@ export function MesasDashboard() {
         setMesaSelecionada(null);
         
         // Recarrega para garantir sincronização
-        await fetchMesas(false);
+        setTimeout(() => {
+          fetchMesas(false);
+        }, 500);
       } catch (err: any) {
+        console.error('Erro ao liberar mesa:', err);
+        alert(`Erro: ${err.response?.data?.message || err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  // NOVO: Função para fechar mesa vazia (aberta por engano)
+  const handleFecharMesaVazia = async () => {
+    if (!mesaSelecionada || !mesaSelecionada.codseq) return;
+    
+    if (mesaSelecionada.quitens.length > 0) {
+      alert('Esta mesa possui itens! Use a opção "Solicitar Conta" ou "Liberar Mesa".');
+      return;
+    }
+
+    const confirmMessage = `
+    FECHAR MESA ${mesaSelecionada.num_quiosque} sem itens?
+    
+    Use esta opção apenas se a mesa foi aberta por engano ou para teste.
+    `;
+
+    if (confirm(confirmMessage)) {
+      setLoading(true);
+      try {
+        await liberarMesa(mesaSelecionada.codseq);
+        
+        // Remove a mesa do estado local imediatamente
+        setMesasAtivas(prev => 
+          prev.filter(m => m.codseq !== mesaSelecionada.codseq)
+        );
+        
+        setModalDetalhes(false);
+        setMesaSelecionada(null);
+        
+        alert('Mesa fechada com sucesso!');
+        
+        // Recarrega para garantir sincronização
+        setTimeout(() => {
+          fetchMesas(false);
+        }, 500);
+      } catch (err: any) {
+        console.error('Erro ao fechar mesa:', err);
         alert(`Erro: ${err.response?.data?.message || err.message}`);
       } finally {
         setLoading(false);
@@ -336,6 +388,7 @@ export function MesasDashboard() {
             onTransferir={handleAbrirTransferir}
             onFecharConta={handleSolicitarFechamento}
             onFinalizarMesa={handleLiberarMesa}
+            onFecharMesaVazia={handleFecharMesaVazia}
           />
         )}
 
