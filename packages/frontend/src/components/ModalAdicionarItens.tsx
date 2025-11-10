@@ -14,11 +14,11 @@ import {
 } from 'lucide-react';
 import {
   getCategorias,
-  getProdutos, // CORREÇÃO: A função chama-se 'getProdutos'
+  // 💡 CORREÇÃO 1: Importando a função correta
+  getProdutosPorCategoria,
   adicionarItensMesa,
 } from '../services/api';
-// Removido 'ItemDoPedido' que não estava sendo usado
-import type { Mesa, Produto, Categoria } from '../types';
+import type { Mesa, Produto, Categoria, PedidoItemDto } from '../types';
 import { CategoriaSidebar } from './CategoriaSidebar';
 import { ProdutoLista } from './ProdutoLista';
 import { formatCurrency } from '../utils/helpers';
@@ -31,20 +31,12 @@ interface ModalProps {
 
 // Interface para o item no carrinho local
 interface CarrinhoItem {
-  codprod: number; // Este é o 'codinterno'
+  codprod: number;
   descricao: string;
   qtd: number;
-  valor: number; // Este é o 'venda'
+  preco: number; // Padronizado para 'preco'
   obs: string;
 }
-
-// Este é o tipo que o DTO do backend realmente espera
-type ItemParaAdicionar = {
-  codprod: number;
-  qtd: number;
-  valor: number;
-  obs: string;
-};
 
 export function ModalAdicionarItens({ mesa, onClose, onItensAdd }: ModalProps) {
   const [loading, setLoading] = useState(true);
@@ -68,7 +60,8 @@ export function ModalAdicionarItens({ mesa, onClose, onItensAdd }: ModalProps) {
         setLoading(true);
         const [cats, prods] = await Promise.all([
           getCategorias(),
-          getProdutos(), // CORREÇÃO: Chamando a função correta
+          // 💡 CORREÇÃO 1: Chamando a função correta (0 = todos os produtos)
+          getProdutosPorCategoria(0),
         ]);
         setCategorias(cats);
         setTodosProdutos(prods);
@@ -88,8 +81,8 @@ export function ModalAdicionarItens({ mesa, onClose, onItensAdd }: ModalProps) {
 
     // 1. Filtra por categoria
     if (catSelecionada) {
-      // CORREÇÃO: 'categoria_id' -> 'codcat'
-      produtos = produtos.filter((p) => p.codcat === catSelecionada);
+      // Usando 'grupo' como definido em 'index.ts'
+      produtos = produtos.filter((p) => p.grupo === catSelecionada);
     }
 
     // 2. Filtra pelo termo de busca
@@ -123,8 +116,7 @@ export function ModalAdicionarItens({ mesa, onClose, onItensAdd }: ModalProps) {
           {
             codprod: produto.codinterno,
             descricao: produto.descricao,
-            // CORREÇÃO: 'vlr_venda' -> 'venda'
-            valor: produto.venda,
+            preco: produto.preco, // Usando 'preco' do tipo Produto
             qtd: 1,
             obs: '',
           },
@@ -163,7 +155,7 @@ export function ModalAdicionarItens({ mesa, onClose, onItensAdd }: ModalProps) {
   };
 
   const totalCarrinho = useMemo(() => {
-    return carrinho.reduce((acc, item) => acc + item.valor * item.qtd, 0);
+    return carrinho.reduce((acc, item) => acc + item.preco * item.qtd, 0);
   }, [carrinho]);
 
   // Envio
@@ -175,16 +167,18 @@ export function ModalAdicionarItens({ mesa, onClose, onItensAdd }: ModalProps) {
     
     setSending(true);
     try {
-      // Mapeia para o DTO correto que o backend espera
-      const itensParaApi: ItemParaAdicionar[] = carrinho.map(item => ({
+      // Mapeia para o DTO 'PedidoItemDto'
+      const itensParaApi: PedidoItemDto[] = carrinho.map(item => ({
         codprod: item.codprod,
+        descricao: item.descricao,
         qtd: item.qtd,
-        valor: item.valor,
+        unitario: item.preco,
         obs: item.obs,
       }));
       
-      // Usando 'as any' para contornar a tipagem errada em api.ts
-      await adicionarItensMesa(mesa.codseq, { itens: itensParaApi } as any);
+      // 💡 CORREÇÃO 2: Passando o array 'itensParaApi' diretamente
+      await adicionarItensMesa(mesa.codseq, itensParaApi);
+      
       onItensAdd(); // Chama a função de callback (para recarregar os dados da mesa)
       
     } catch (err: any) {
@@ -287,7 +281,7 @@ export function ModalAdicionarItens({ mesa, onClose, onItensAdd }: ModalProps) {
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-zinc-800">{item.descricao}</span>
                     <span className="font-bold text-lg text-brand-blue-dark">
-                      {formatCurrency(item.valor * item.qtd)}
+                      {formatCurrency(item.preco * item.qtd)}
                     </span>
                   </div>
                   

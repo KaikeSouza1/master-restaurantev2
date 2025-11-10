@@ -1,13 +1,37 @@
 // packages/frontend/src/components/CategoriaSidebar.tsx
 
 import type { Categoria } from '../types';
-import { Layers } from 'lucide-react';
+import { List } from 'lucide-react';
 
 interface Props {
   categorias: Categoria[];
-  catSelecionada: number | null;
+  catSelecionada: number | null; // Nome da prop conforme usado em ModalAdicionarItens.tsx
   onSelectCategoria: (id: number | null) => void;
 }
+
+// Componente de botão interno para manter a estilização consistente
+const BotaoCategoria = ({
+  onClick,
+  label,
+  isActive,
+}: {
+  onClick: () => void;
+  label: string;
+  isActive: boolean;
+}) => {
+  const baseClasses = "w-full text-left px-4 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2";
+  const activeClasses = "bg-brand-blue-dark text-white shadow-lg";
+  const inactiveClasses = "text-zinc-600 hover:bg-zinc-200 hover:text-zinc-800";
+
+  return (
+    <button
+      onClick={onClick}
+      className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses}`}
+    >
+      <span>{label}</span>
+    </button>
+  );
+};
 
 export function CategoriaSidebar({
   categorias,
@@ -15,36 +39,33 @@ export function CategoriaSidebar({
   onSelectCategoria,
 }: Props) {
   return (
-    <nav className="p-3 space-y-1">
-      {/* Botão para mostrar todas as categorias */}
-      <button
-        onClick={() => onSelectCategoria(null)}
-        className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg font-semibold text-left transition-all
-          ${
-            catSelecionada === null
-              ? 'bg-brand-blue-light text-white shadow-lg'
-              : 'text-zinc-700 hover:bg-zinc-100'
-          }`}
-      >
-        <Layers size={20} />
-        <span>Todas as Categorias</span>
-      </button>
-      
-      {/* Lista de categorias */}
-      {categorias.map((cat) => (
-        <button
-          key={cat.codcat}
-          onClick={() => onSelectCategoria(cat.codcat)}
-          className={`w-full px-4 py-3 rounded-lg font-semibold text-left transition-all
-            ${
-              catSelecionada === cat.codcat
-                ? 'bg-brand-blue-light text-white shadow-lg'
-                : 'text-zinc-700 hover:bg-zinc-100'
-            }`}
-        >
-          {cat.descricao}
-        </button>
-      ))}
-    </nav>
+    <aside className="bg-white p-4 rounded-xl shadow-lg h-full">
+      <h3 className="text-xl font-bold text-zinc-800 mb-4 flex items-center space-x-2">
+        <List size={22} />
+        <span>Categorias</span>
+      </h3>
+      <nav className="space-y-2">
+        {/* Botão "Todos" */}
+        <BotaoCategoria
+          onClick={() => onSelectCategoria(null)}
+          label="Todos os Produtos"
+          isActive={catSelecionada === null}
+        />
+
+        {/* Lista de Categorias */}
+        {categorias.map((cat) => (
+          <BotaoCategoria
+            // 💡 CORREÇÃO: 'cat.codcat' -> 'cat.codigo'
+            key={cat.codigo}
+            // 💡 CORREÇÃO: 'cat.codcat' -> 'cat.codigo'
+            onClick={() => onSelectCategoria(cat.codigo)}
+            // 💡 CORREÇÃO: 'cat.descricao' -> 'cat.nome'
+            label={cat.nome}
+            // 💡 CORREÇÃO: 'cat.codcat' -> 'cat.codigo'
+            isActive={catSelecionada === cat.codigo}
+          />
+        ))}
+      </nav>
+    </aside>
   );
 }

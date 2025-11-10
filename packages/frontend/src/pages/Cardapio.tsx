@@ -5,8 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import { getEmpresaInfo, getCategorias, getProdutosPorCategoria, salvarPedidoDelivery } from '../services/api';
 // CORREÇÃO TS1484: Usando 'import type' para importar apenas tipos
 import type { EmpresaInfo, Categoria, Produto, ItemCarrinho, CreatePedidoDto, PedidoItemDto } from '../types'; 
-import CategoriaSidebar from '../components/CategoriaSidebar';
-import ProdutoLista from '../components/ProdutoLista';
+// CORREÇÃO: O nome do componente é CategoriaSidebar (como usado abaixo)
+import { CategoriaSidebar } from '../components/CategoriaSidebar';
+// CORREÇÃO: O nome do componente é ProdutoLista (como usado abaixo)
+import { ProdutoLista } from '../components/ProdutoLista';
 import { Carrinho } from '../components/Carrinho';
 import Header from '../components/Header';
 import { Loader2, AlertTriangle } from 'lucide-react';
@@ -40,6 +42,7 @@ export function CardapioPage() {
       if (defaultCat !== null) {
         getProdutosPorCategoria(defaultCat).then(setProdutos).catch(() => setProdutos([]));
       } else {
+          // Fallback se não houver categorias
           getProdutosPorCategoria(0).then(setProdutos).catch(() => setProdutos([]));
       }
     })
@@ -53,6 +56,7 @@ export function CardapioPage() {
   // 2. Recarregar produtos ao mudar a categoria
   useEffect(() => {
     if (categoriaAtiva === null && !loading) {
+        // Carrega "Todos" se 'null' for selecionado
         getProdutosPorCategoria(0).then(setProdutos).catch(() => setProdutos([]));
         return;
     }
@@ -73,7 +77,7 @@ export function CardapioPage() {
           i.codinterno === produto.codinterno ? { ...i, qtd: i.qtd + 1 } : i,
         );
       }
-      // O preço vem como Number, então o mapeamento é seguro
+      // O tipo 'Produto' já tem 'preco', então a conversão é direta
       return [...prev, { ...produto, qtd: 1 }];
     });
   };
@@ -113,7 +117,7 @@ export function CardapioPage() {
       codprod: Number(item.codinterno),
       descricao: item.descricao,
       qtd: item.qtd,
-      unitario: Number(item.preco),
+      unitario: Number(item.preco), // Usa 'preco' do ItemCarrinho
       obs: item.obs
     }));
 
@@ -121,9 +125,9 @@ export function CardapioPage() {
       const pedidoData: CreatePedidoDto = {
         tipo: 'D', 
         nome_cli_esp: user.nome,
-        fone_esp: '999999999',
-        val_taxa_entrega: 5.0, 
-        cod_endereco: 1, 
+        fone_esp: '999999999', // TODO: Pegar telefone real do usuário
+        val_taxa_entrega: 5.0, // TODO: Calcular taxa real
+        cod_endereco: 1, // TODO: Pegar endereço real do usuário
         itens: itensDto,
       };
 
@@ -167,7 +171,8 @@ export function CardapioPage() {
         <div className="md:col-span-1">
           <CategoriaSidebar
             categorias={categorias}
-            categoriaAtiva={categoriaAtiva}
+            // CORREÇÃO: O nome no arquivo original era 'categoriaAtiva'
+            catSelecionada={categoriaAtiva}
             onSelectCategoria={setCategoriaAtiva}
           />
         </div>
@@ -176,7 +181,9 @@ export function CardapioPage() {
         <div className="md:col-span-2">
           <ProdutoLista
             produtos={produtos}
-            onAdicionarProduto={adicionarAoCarrinho}
+            // 💡 CORREÇÃO: A prop 'onAdicionarProduto' foi renomeada para 'onAddItem'
+            // para bater com a definição em ProdutoLista.tsx
+            onAddItem={adicionarAoCarrinho}
           />
         </div>
         
