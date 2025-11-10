@@ -16,6 +16,7 @@
     "framer-motion": "^12.23.24",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.552.0",
+    "react-hot-toast": "^2.6.0",
     "react-modal": "^3.16.3",
     "react-router-dom": "^7.9.5"
   }
