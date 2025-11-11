@@ -5,13 +5,12 @@ import ReactModal from 'react-modal';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { X, Loader2, DollarSign, CreditCard, Smartphone, Banknote, Printer, CheckCircle } from 'lucide-react';
-import { useReactToPrint } from 'react-to-print'; // <-- NOVO: Importar
+import { useReactToPrint } from 'react-to-print';
 import { finalizarMesaCaixa } from '../services/api';
-import type { Mesa, EmpresaInfo } from '../types'; // <-- NOVO: Importar EmpresaInfo
+import type { Mesa, EmpresaInfo } from '../types';
 import { formatCurrency } from '../utils/helpers';
-import { ReciboImpressao } from './ReciboImpressao'; // <-- NOVO: Importar o recibo
+import { ReciboImpressao } from './ReciboImpressao';
 
-// Vamos assumir estes IDs. Você deve mudá-los se forem diferentes no seu DB.
 const FORMAS_PAGAMENTO = [
   { id: 1, nome: 'Dinheiro', icon: Banknote },
   { id: 2, nome: 'PIX', icon: Smartphone },
@@ -21,26 +20,28 @@ const FORMAS_PAGAMENTO = [
 
 interface ModalProps {
   mesa: Mesa;
-  empresaInfo: EmpresaInfo | null; // <-- NOVO: Prop para info da empresa
+  empresaInfo: EmpresaInfo | null;
   onClose: () => void;
-  onFinalizado: () => void; // Callback para quando a API der sucesso
+  onFinalizado: () => void;
 }
 
 export function ModalFinalizarCaixa({
   mesa,
-  empresaInfo, // <-- NOVO
+  empresaInfo,
   onClose,
   onFinalizado,
 }: ModalProps) {
   const [formaPagtoId, setFormaPagtoId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [sucesso, setSucesso] = useState(false); // <-- NOVO: Estado de sucesso
-
-  // --- Lógica de Impressão ---
+  const [sucesso, setSucesso] = useState(false);
+  
+  // --- LÓGICA DE IMPRESSÃO CORRIGIDA ---
+  const [isPrinting, setIsPrinting] = useState(false); // Para o UI (texto do botão)
+  const isPrintingRef = useRef(false); // <-- NOVO REF (Para a lógica síncrona)
   const componentRef = useRef<HTMLDivElement>(null);
   
  const handlePrint = useReactToPrint({
-  content: () => componentRef.current,
+  contentRef: componentRef,
   pageStyle: `
     @page { 
       size: 80mm auto;
@@ -52,6 +53,14 @@ export function ModalFinalizarCaixa({
       color-adjust: exact;
     }
   `,
+  onBeforePrint: async () => {
+    setIsPrinting(true); // Atualiza o UI
+    isPrintingRef.current = true; // Atualiza a lógica IMEDIATAMENTE
+  },
+  onAfterPrint: async () => {
+    setIsPrinting(false); // Atualiza o UI
+    isPrintingRef.current = false; // Atualiza a lógica IMEDIATAMENTE
+  },
 });
   // --- Fim da Lógica de Impressão ---
 
@@ -66,14 +75,14 @@ export function ModalFinalizarCaixa({
 
     const promise = finalizarMesaCaixa(mesa.codseq, {
       cod_forma_pagto: formaPagtoId,
-      num_caixa: 1, // Enviando 'Caixa 1' como padrão
+      num_caixa: 1,
     });
 
     toast.promise(promise, {
       loading: 'Registrando venda no caixa...',
       success: () => {
-        onFinalizado(); // Chama o callback de sucesso (para recarregar o dashboard)
-        setSucesso(true); // <-- NOVO: Muda o estado do modal para sucesso
+        onFinalizado();
+        setSucesso(true);
         return 'Venda registrada e mesa finalizada!';
       },
       error: (err: any) => {
@@ -85,7 +94,6 @@ export function ModalFinalizarCaixa({
     try {
       await promise;
     } catch (err) {
-      // Erro tratado pelo toast
     } finally {
       setIsLoading(false);
     }
@@ -93,16 +101,21 @@ export function ModalFinalizarCaixa({
 
   const formaPagtoSelecionada = FORMAS_PAGAMENTO.find(f => f.id === formaPagtoId);
 
-  // Função para fechar TUDO
   const handleCloseTotal = () => {
-    onFinalizado(); // Garante que o dashboard recarregou
-    onClose();      // Fecha este modal
+    onFinalizado();
+    onClose();
+  }
+
+  // Função de fechar o modal que verifica o REF (síncrono)
+  const handleModalClose = () => {
+    if (isPrintingRef.current) return; // <-- CORREÇÃO: Verifica o REF, não o STATE
+    handleCloseTotal();
   }
 
   return (
     <ReactModal
       isOpen={true}
-      onRequestClose={handleCloseTotal} // <-- MUDANÇA: Usar o handleCloseTotal
+      onRequestClose={handleModalClose} // <-- USA A FUNÇÃO CORRIGIDA
       appElement={document.getElementById('root') || undefined}
       className="Modal bg-brand-gray-light w-full max-w-xl mx-auto my-auto rounded-2xl shadow-2xl overflow-hidden"
       overlayClassName="Overlay fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -126,7 +139,7 @@ export function ModalFinalizarCaixa({
             </p>
           </div>
           <motion.button
-            onClick={handleCloseTotal} // <-- MUDANÇA: Usar o handleCloseTotal
+            onClick={handleCloseTotal}
             whileHover={{ scale: 1.1, rotate: 90 }}
             whileTap={{ scale: 0.9 }}
             className="text-white hover:bg-white/20 rounded-full p-2 transition-all"
@@ -135,9 +148,6 @@ export function ModalFinalizarCaixa({
           </motion.button>
         </div>
 
-        {/* ========================================================== */}
-        {/* <-- LÓGICA DE CONTEÚDO ALTERADA --> */}
-        {/* ========================================================== */}
         {sucesso ? (
           // --- TELA DE SUCESSO E IMPRESSÃO ---
           <div className="p-6 flex-1 overflow-y-auto space-y-5 bg-white flex flex-col justify-center items-center">
@@ -151,12 +161,13 @@ export function ModalFinalizarCaixa({
               
               <motion.button
                 onClick={handlePrint}
+                disabled={isPrinting} // O state ainda controla o UI
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="w-full px-8 py-4 rounded-lg font-bold text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:shadow-xl transition-all flex items-center justify-center space-x-2 text-lg"
+                className="w-full px-8 py-4 rounded-lg font-bold text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:shadow-xl transition-all flex items-center justify-center space-x-2 text-lg disabled:opacity-70"
               >
                 <Printer size={24} />
-                <span>Imprimir Recibo (80mm)</span>
+                <span>{isPrinting ? 'Imprimindo...' : 'Imprimir Recibo (80mm)'}</span>
               </motion.button>
 
               <motion.button
@@ -244,7 +255,7 @@ export function ModalFinalizarCaixa({
       
       {/* ========================================================== */}
       {/* <-- COMPONENTE DO RECIBO (ESCONDIDO) --> */}
-      {/* ========================================================== */}
+      {/* =C:/master-restaurante-v2/packages/frontend/src/components/ModalFinalizarCaixa.tsx ========================================= */}
       <div style={{ display: "none" }}>
         <ReciboImpressao ref={componentRef} mesa={mesa} empresaInfo={empresaInfo} />
       </div>
