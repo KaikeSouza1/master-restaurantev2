@@ -1,21 +1,19 @@
-// master-restaurante-v2/packages/frontend/src/components/AdminLayout.tsx
+// packages/frontend/src/components/AdminLayout.tsx
 
 import { NavLink, Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-// 1. IMPORTAR O ÍCONE
-import { LayoutGrid, ClipboardList, LogOut, FileText } from 'lucide-react';
+import { LayoutGrid, History, LogOut, Settings } from 'lucide-react';
 
 export function AdminLayout() {
   const { logout, user } = useAuth();
 
   if (!user || user.role !== 'admin') {
-    return <Navigate to="/login" replace />;
+      return <Navigate to="/login" replace />;
   }
 
-  const baseStyle =
-    'flex items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-all';
-  const activeStyle = 'bg-brand-blue-dark text-white shadow-lg';
-  const inactiveStyle = 'text-zinc-600 hover:bg-brand-gray-mid';
+  const baseStyle = "flex items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-all";
+  const activeStyle = "bg-brand-blue-dark text-white shadow-lg";
+  const inactiveStyle = "text-zinc-600 hover:bg-brand-gray-mid";
 
   const getNavLinkClass = ({ isActive }: { isActive: boolean }) =>
     `${baseStyle} ${isActive ? activeStyle : inactiveStyle}`;
@@ -25,24 +23,23 @@ export function AdminLayout() {
       {/* Sidebar */}
       <nav className="w-64 bg-white p-4 shadow-lg flex flex-col">
         <h1 className="text-2xl font-bold text-brand-blue-dark mb-8 border-b pb-4">
-          Master V2 Admin
+          Master Restaurante
         </h1>
-
+        
         <div className="flex flex-col space-y-2 flex-1">
-          {/* Link para o Cardápio Removido */}
           <NavLink to="/admin/mesas" className={getNavLinkClass}>
             <LayoutGrid size={20} />
             <span>Gestão de Mesas</span>
           </NavLink>
-          <NavLink to="/admin/kds" className={getNavLinkClass}>
-            <ClipboardList size={20} />
-            <span>Painel KDS</span>
-          </NavLink>
-
-          {/* 2. ADICIONAR O NOVO LINK AQUI */}
+          
           <NavLink to="/admin/historico" className={getNavLinkClass}>
-            <FileText size={20} />
-            <span>Histórico</span>
+            <History size={20} />
+            <span>Histórico de Pedidos</span>
+          </NavLink>
+          
+          <NavLink to="/admin/configuracoes" className={getNavLinkClass}>
+            <Settings size={20} />
+            <span>Configurações</span>
           </NavLink>
         </div>
 
