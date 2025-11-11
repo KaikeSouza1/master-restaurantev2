@@ -1,4 +1,4 @@
-// master-restaurante-v2/packages/frontend/src/types/index.ts
+// packages/frontend/src/types/index.ts
 
 // ==========================================================
 // TIPOS DE AUTENTICAÇÃO
@@ -112,4 +112,9 @@ export type KdsPedido = Mesa;
 
 export interface AdicionarItensDto {
   itens: PedidoItemDto[];
+}
+
+export interface FinalizarCaixaDto {
+  cod_forma_pagto: number;
+  num_caixa?: number;
 }
