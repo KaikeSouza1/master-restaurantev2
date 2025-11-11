@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.FinalizarCaixaDto = exports.JuntarMesasDto = exports.AtualizarStatusDto = exports.TransferirMesaDto = exports.AdicionarItensDto = exports.AbrirMesaDto = exports.CreatePedidoDto = exports.PedidoItemDto = void 0;
+exports.AtualizarStatusDto = exports.TransferirMesaDto = exports.AdicionarItensDto = exports.AbrirMesaDto = exports.CreatePedidoDto = exports.PedidoItemDto = void 0;
 const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
 class PedidoItemDto {
@@ -121,34 +121,4 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], AtualizarStatusDto.prototype, "status", void 0);
-class JuntarMesasDto {
-    codseqOrigem;
-    codseqDestino;
-}
-exports.JuntarMesasDto = JuntarMesasDto;
-__decorate([
-    (0, class_validator_1.IsInt)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", Number)
-], JuntarMesasDto.prototype, "codseqOrigem", void 0);
-__decorate([
-    (0, class_validator_1.IsInt)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", Number)
-], JuntarMesasDto.prototype, "codseqDestino", void 0);
-class FinalizarCaixaDto {
-    cod_forma_pagto;
-    num_caixa;
-}
-exports.FinalizarCaixaDto = FinalizarCaixaDto;
-__decorate([
-    (0, class_validator_1.IsInt)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", Number)
-], FinalizarCaixaDto.prototype, "cod_forma_pagto", void 0);
-__decorate([
-    (0, class_validator_1.IsInt)(),
-    (0, class_validator_1.IsOptional)(),
-    __metadata("design:type", Number)
-], FinalizarCaixaDto.prototype, "num_caixa", void 0);
 //# sourceMappingURL=restaurante.dtos.js.map

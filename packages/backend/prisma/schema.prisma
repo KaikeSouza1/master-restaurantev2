@@ -7,6 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Model para Administradores do Painel
 model AdminUser {
   id       Int     @id @default(autoincrement())
   email    String  @unique @db.VarChar(255)
@@ -17,29 +18,34 @@ model AdminUser {
   @@map("AdminUser")
 }
 
+// Model para Clientes do Cardápio/Delivery
 model cliente_loja_virtual {
-  codseq_clv      Int      @id
-  nome_clv        String?  @db.VarChar(100)
-  email_clv       String?  @db.VarChar(50)
-  cpf_clv         String?  @db.VarChar(20)
-  telefone1_clv   String?  @db.VarChar(20)
-  acesso_clv      String?  @db.VarChar(250)
-  tipo_pessoa_clv String?  @db.VarChar(2)
+  codseq_clv       Int       @id
+  nome_clv         String?   @db.VarChar(100)
+  email_clv        String?   @db.VarChar(50)
+  cpf_clv          String?   @db.VarChar(20)
+  telefone1_clv    String?   @db.VarChar(20)
+  acesso_clv       String?   @db.VarChar(250) // Senha
+  tipo_pessoa_clv  String?   @db.VarChar(2)
+  // Outros campos podem ser adicionados se necessário
 }
 
+// Model para Produtos
 model produtos {
-  codinterno   Decimal   @id @db.Decimal(16, 0)
-  descricao    String?   @db.VarChar(350)
-  preco        Decimal?  @default(0) @db.Decimal(14, 5)
-  grupo        Int?
-  inativo      String?   @default("") @db.VarChar(1)
-  grupo_rel    grupo?    @relation("produtos_grupoTogrupo", fields: [grupo], references: [codigo])
-  quitens      quitens[]
-
+  codinterno    Decimal  @id @db.Decimal(16, 0)
+  descricao     String?  @db.VarChar(350)
+  preco         Decimal? @default(0) @db.Decimal(14, 5)
+  grupo         Int?     // ID da Categoria
+  inativo       String?  @default("") @db.VarChar(1)
+  // Relacionamentos
+  grupo_rel     grupo?   @relation("produtos_grupoTogrupo", fields: [grupo], references: [codigo])
+  quitens       quitens[]
+  
   @@index([descricao])
   @@index([grupo])
 }
 
+// Model para Grupos (Categorias)
 model grupo {
   codigo           Int        @id(map: "gr1upcodgrupo")
   nome             String?    @db.VarChar(30)
@@ -49,6 +55,7 @@ model grupo {
   @@index([nome])
 }
 
+// Model para Informações da Empresa
 model empresa {
   codigo Int     @id(map: "em1pcodempresa")
   nome   String? @db.VarChar(60)
@@ -60,22 +67,32 @@ model empresa {
   fone   String? @db.VarChar(12)
 }
 
+// ==========================================================
+// TABELA PRINCIPAL PARA A LÓGICA DO RESTAURANTE (MESAS/PEDIDOS)
+// ==========================================================
 model quiosque {
-  codseq                 Int       @id(map: "kc1odseqquiosque")
-  tipo                   String?   @db.VarChar(1)
-  num_quiosque           Int?
-  data_hora_abertura     DateTime? @db.Timestamp(6)
-  vda_finalizada         String?   @db.VarChar(1)
-  obs                    String?   @db.VarChar(149)
-  nome_cli_esp           String?   @db.VarChar(29)
-  fone_esp               String?   @db.VarChar(19)
+  codseq                 Int            @id(map: "kc1odseqquiosque")
+  tipo                   String?        @db.VarChar(1) // 'M' para Mesa, 'D' para Delivery
+  num_quiosque           Int?           // Número da Mesa
+  data_hora_abertura     DateTime?      @db.Timestamp(6)
+  vda_finalizada         String?        @db.VarChar(1) // 'N' (Não) ou 'S' (Sim) - CHAVE PARA NFCe
+  obs                    String?        @db.VarChar(149) // Usado para status (NOVO, PREPARANDO, PRONTO, PAGAMENTO)
+  
+  // Dados do Pedido
+  nome_cli_esp           String?        @db.VarChar(29)
+  fone_esp               String?        @db.VarChar(19)
   cod_endereco           Int?
-  val_taxa_entrega       Decimal?  @db.Decimal(8, 2)
-  sub_total_geral        Decimal?  @default(0) @db.Decimal(8, 2)
-  total                  Decimal?  @default(0) @db.Decimal(8, 2)
-  data_hora_finalizada   DateTime? @db.Timestamp(6)
-  ean                    String    @db.VarChar(13)
+  val_taxa_entrega       Decimal?       @db.Decimal(8, 2)
+  sub_total_geral        Decimal?       @default(0) @db.Decimal(8, 2)
+  total                  Decimal?       @default(0) @db.Decimal(8, 2)
+  
+  data_hora_finalizada   DateTime?      @db.Timestamp(6) // Importante para o KDS de finalizados
+  
+  // Campos obrigatórios (mesmo que não usados ativamente na API)
+  ean                    String         @db.VarChar(13)
   loja_virtual           Boolean?
+  
+  // Relacionamento com os Itens
   quitens                quitens[]
   mec_quiosque           mec_quiosque[]
   qcadcheq               qcadcheq[]
@@ -88,21 +105,27 @@ model quiosque {
   @@index([tipo])
 }
 
+// Model para Itens do Pedido (Mesa/Delivery)
 model quitens {
   codseq      Int       @id(map: "kc1odseqquitens")
-  codseq_qu   Int?
-  codprod     Decimal?  @db.Decimal(16, 0)
+  codseq_qu   Int?      // ID do Quiosque (pedido)
+  codprod     Decimal?  @db.Decimal(16, 0) // ID do Produto
   descricao   String?   @db.VarChar(100)
   qtd         Decimal?  @default(0) @db.Decimal(12, 3)
   unitario    Decimal?  @default(0) @db.Decimal(10, 3)
   total       Decimal?  @default(0) @db.Decimal(8, 2)
   obs         String?   @db.VarChar(1000)
+  
+  // Relacionamentos
   quiosque    quiosque? @relation(fields: [codseq_qu], references: [codseq], onDelete: Cascade)
   produtos    produtos? @relation(fields: [codprod], references: [codinterno])
 
   @@index([codseq_qu])
 }
 
+// --- Tabelas de suporte (para o schema compilar) ---
+// Estas tabelas são referenciadas por 'quiosque' mas não usadas na nossa API. 
+// Mantemos elas vazias para o Prisma não dar erro.
 model mec_quiosque {
   codseq           Int       @id(map: "kcodseq_mec_qui")
   cod_mecanico     Int?
@@ -132,43 +155,4 @@ model qupar {
   codseq    Int       @id(map: "kc1odseqqupar")
   codseq_qu Int?
   quiosque  quiosque? @relation(fields: [codseq_qu], references: [codseq], onDelete: Cascade, map: "rel1_kcodqui")
-}
-
-model caixa {
-  codseq           Int       @id
-  datai            DateTime? @db.Date
-  historico        String?   @db.VarChar(255)
-  debito           Decimal?  @default(0) @db.Decimal(12, 2)
-  credito          Decimal?  @default(0) @db.Decimal(12, 2)
-  acumular         String    @db.VarChar(1)
-  tipo             String?   @db.VarChar(50)
-  num_caixa        Int?      @default(0)
-  cod_forma_pagto  Int?
-  codven           Int?      @default(0)
-  spc              String?   @db.VarChar(1)
-  obs              String?   @db.VarChar(300)
-  cod_autorizacao  Int?
-  num_nf           Int?
-  val_juros        Decimal?  @db.Decimal(8, 2)
-  sequencia        Int?
-  num_seq_ecf      Int?      @default(0)
-  coddd            Int?      @default(0)
-  hora_inclusao    DateTime? @db.Time
-  ocultar_lacto    Int?      @default(0)
-  data_i           DateTime? @db.Date
-  hora_i           DateTime? @db.Time
-  codcartao        Int?
-  id_pagar_cai     Int?
-  id_nf_servico    Int?
-  id_user_gpw      Int?
-  id_empresa       Int?
-  caixa_aberto     Boolean?
-
-  @@index([cod_forma_pagto])
-  @@index([num_seq_ecf])
-  @@index([datai])
-  @@index([historico])
-  @@index([num_caixa])
-  @@index([num_nf])
-  @@index([coddd])
 }

@@ -7,27 +7,17 @@ import {
   abrirMesa,
   solicitarFechamento,
   liberarMesa,
-  finalizarMesaCaixa,
-  getEmpresaInfo, // <-- NOVO: Importar
 } from '../services/api';
-import type { Mesa, EmpresaInfo } from '../types'; // <-- NOVO: Importar EmpresaInfo
+import type { Mesa } from '../types';
 import { MesaCardDashboard } from '../components/MesaCardDashboard';
 import { ModalDetalhesMesa } from '../components/ModalDetalhesMesa';
 import { ModalAdicionarItens } from '../components/ModalAdicionarItens';
 import { ModalTransferirMesa } from '../components/ModalTransferirMesa';
-import { ModalConfirmacao } from '../components/ModalConfirmacao';
-import { ModalJuntarMesa } from '../components/ModalJuntarMesa';
-import { ModalFinalizarCaixa } from '../components/ModalFinalizarCaixa';
-import {
-  Loader2,
-  AlertTriangle,
-  LayoutGrid,
-  Filter,
-  Search, 
-} from 'lucide-react';
+import { ModalConfirmacao } from '../components/ModalConfirmacao'; // Importado
+import { Loader2, AlertTriangle, LayoutGrid, Filter } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
-const TOTAL_MESAS = 40;
+const TOTAL_MESAS = 20;
 
 type FiltroStatus = 'TODAS' | 'LIVRE' | 'OCUPADA' | 'PAGAMENTO';
 
@@ -62,18 +52,13 @@ export function MesasDashboard() {
   const [mesasAtivas, setMesasAtivas] = useState<Mesa[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  const [empresaInfo, setEmpresaInfo] = useState<EmpresaInfo | null>(null); // <-- NOVO: Estado para info da empresa
 
   const [mesaSelecionada, setMesaSelecionada] = useState<Mesa | null>(null);
   const [modalDetalhes, setModalDetalhes] = useState(false);
   const [modalTransferir, setModalTransferir] = useState(false);
   const [modalAdicionar, setModalAdicionar] = useState(false);
-  const [modalJuntar, setModalJuntar] = useState(false);
-  const [modalFinalizarCaixa, setModalFinalizarCaixa] = useState(false);
 
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('TODAS');
-  const [buscaMesa, setBuscaMesa] = useState<string>(''); 
 
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
   const [confirmModalProps, setConfirmModalProps] = useState<{
@@ -110,15 +95,6 @@ export function MesasDashboard() {
 
   useEffect(() => {
     fetchMesas(true);
-    
-    // <-- NOVO: Buscar info da empresa -->
-    getEmpresaInfo()
-      .then(setEmpresaInfo)
-      .catch(err => {
-        console.error("Falha ao buscar info da empresa", err);
-        toast.error("Falha ao buscar dados da empresa.");
-      });
-      
     const intervalId = setInterval(() => fetchMesas(false), 15000);
     return () => clearInterval(intervalId);
   }, [fetchMesas]);
@@ -221,7 +197,6 @@ export function MesasDashboard() {
     );
   };
 
-  // Esta é a função para (NFCe)
   const handleLiberarMesa = async () => {
     if (!mesaSelecionada || !mesaSelecionada.codseq) return;
 
@@ -233,7 +208,7 @@ export function MesasDashboard() {
       const promise = liberarMesa(codseq);
 
       toast.promise(promise, {
-        loading: 'Finalizando pedido (NFCe)...',
+        loading: 'Finalizando pedido...',
         success: () => {
           setMesasAtivas((prev) => prev.filter((m) => m.codseq !== codseq));
           setModalDetalhes(false);
@@ -241,10 +216,10 @@ export function MesasDashboard() {
           setTimeout(() => {
             fetchMesas(false);
           }, 500);
-          return 'Mesa finalizada (NFCe) com sucesso!';
+          return 'Mesa finalizada com sucesso!';
         },
         error: (err: any) => {
-          console.error('Erro ao liberar mesa (NFCe):', err);
+          console.error('Erro ao liberar mesa:', err);
           return `Erro: ${err.response?.data?.message || err.message}`;
         },
       });
@@ -258,10 +233,16 @@ export function MesasDashboard() {
       }
     };
 
+    // ==========================================================
+    // <-- ÚNICA ALTERAÇÃO AQUI
+    // Mensagem de confirmação mais explícita para o NFCe
+    // ==========================================================
     askForConfirmation(
-      `Finalizar Pedido (NFCe)?`,
+      `Finalizar Pedido (NFCe)?`, // Título atualizado
       <div className="space-y-3">
         <p>Confirmar a finalização da Mesa {numQuiosque}?</p>
+
+        {/* Bloco destacado */}
         <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-3 text-center">
           <p className="font-semibold text-yellow-900">
             Para finalizar no Emissor NFCe, utilize o Pedido Nº:
@@ -274,12 +255,6 @@ export function MesasDashboard() {
       onConfirm,
       'danger',
     );
-  };
-
-  // Esta é a nova função para (Imprimir/Caixa)
-  const handleFinalizarCaixa = () => {
-    if (!mesaSelecionada || !mesaSelecionada.codseq) return;
-    setModalFinalizarCaixa(true); // Apenas abre o novo modal
   };
 
   const handleFecharMesaVazia = async () => {
@@ -357,10 +332,6 @@ export function MesasDashboard() {
     setModalTransferir(true);
   };
 
-  const handleAbrirJuntar = () => {
-    setModalJuntar(true);
-  };
-
   // Lógica de Geração das Mesas
   const mesasMapeadas = new Map(
     mesasAtivas.map((m) => [m.num_quiosque, m]),
@@ -391,27 +362,14 @@ export function MesasDashboard() {
     }
   }
 
-  const mesasFiltradas = mesasCompletas
-    .filter((mesa) => {
-      // 1. Filtro por Status
-      if (filtroStatus === 'TODAS') return true;
-      if (filtroStatus === 'LIVRE') return mesa.codseq === 0;
-      if (filtroStatus === 'OCUPADA')
-        return mesa.codseq !== 0 && mesa.obs !== 'PAGAMENTO';
-      if (filtroStatus === 'PAGAMENTO') return mesa.obs === 'PAGAMENTO';
-      return true;
-    })
-    .filter((mesa) => {
-      // 2. Filtro por Busca
-      if (buscaMesa.trim() === '') return true; 
-      
-      const numMesa = mesa.num_quiosque ?? 0;
-      return numMesa.toString().includes(buscaMesa.trim());
-    });
-  
-  const mesasOcupadasParaJuntar = mesasCompletas.filter(
-    (m) => m.codseq !== 0 && m.codseq !== mesaSelecionada?.codseq && m.obs !== 'PAGAMENTO'
-  );
+  const mesasFiltradas = mesasCompletas.filter((mesa) => {
+    if (filtroStatus === 'TODAS') return true;
+    if (filtroStatus === 'LIVRE') return mesa.codseq === 0;
+    if (filtroStatus === 'OCUPADA')
+      return mesa.codseq !== 0 && mesa.obs !== 'PAGAMENTO';
+    if (filtroStatus === 'PAGAMENTO') return mesa.obs === 'PAGAMENTO';
+    return true;
+  });
 
   // Estatísticas
   const stats = {
@@ -498,16 +456,14 @@ export function MesasDashboard() {
           </div>
         </div>
 
-        {/* Área de Filtros e Busca */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          
-          {/* Botões de Filtro */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center space-x-2 text-zinc-600">
-              <Filter size={20} />
-              <span className="font-semibold">Filtrar:</span>
-            </div>
+        {/* Filtros Modernos */}
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 text-zinc-600">
+            <Filter size={20} />
+            <span className="font-semibold">Filtrar:</span>
+          </div>
 
+          <div className="flex flex-wrap gap-2">
             {filtros.map((filtro) => (
               <motion.button
                 key={filtro.valor}
@@ -524,35 +480,11 @@ export function MesasDashboard() {
                 <span>{filtro.label}</span>
                 {filtroStatus === filtro.valor && (
                   <span className="bg-white/30 px-2 py-0.5 rounded-full text-xs font-black">
-                    {mesasCompletas.filter((mesa) => {
-                      if (filtroStatus === 'TODAS') return true;
-                      if (filtroStatus === 'LIVRE') return mesa.codseq === 0;
-                      if (filtroStatus === 'OCUPADA')
-                        return mesa.codseq !== 0 && mesa.obs !== 'PAGAMENTO';
-                      if (filtroStatus === 'PAGAMENTO') return mesa.obs === 'PAGAMENTO';
-                      return true;
-                    }).length}
+                    {mesasFiltradas.length}
                   </span>
                 )}
               </motion.button>
             ))}
-          </div>
-
-          {/* Campo de Busca */}
-          <div className="relative">
-            <motion.input
-              whileHover={{ scale: 1.02 }}
-              type="number"
-              placeholder="Buscar Nº da Mesa..."
-              value={buscaMesa}
-              onChange={(e) => setBuscaMesa(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full sm:w-56 rounded-xl border-2 border-zinc-300 focus:ring-2 focus:ring-brand-blue-light focus:border-brand-blue-light outline-none transition-all shadow-sm"
-              style={{ MozAppearance: 'textfield' }}
-            />
-            <Search
-              size={20}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
-            />
           </div>
         </div>
       </div>
@@ -578,10 +510,7 @@ export function MesasDashboard() {
               className="col-span-full text-center p-12 bg-white rounded-2xl shadow-lg border-2 border-dashed border-zinc-300"
             >
               <p className="text-zinc-500 text-lg font-semibold">
-                {buscaMesa.trim() !== ''
-                  ? `Nenhuma mesa encontrada para o número "${buscaMesa}".`
-                  : `Nenhuma mesa encontrada para o filtro "${filtroStatus}".`
-                }
+                Nenhuma mesa encontrada para o filtro "{filtroStatus}".
               </p>
             </motion.div>
           )}
@@ -597,10 +526,8 @@ export function MesasDashboard() {
             onClose={() => setModalDetalhes(false)}
             onAdicionarItens={handleAbrirAdicionarItens}
             onTransferir={handleAbrirTransferir}
-            onJuntar={handleAbrirJuntar} 
             onFecharConta={handleSolicitarFechamento}
-            onFinalizarMesa={handleLiberarMesa} 
-            onFinalizarCaixa={handleFinalizarCaixa} 
+            onFinalizarMesa={handleLiberarMesa}
             onFecharMesaVazia={handleFecharMesaVazia}
           />
         )}
@@ -644,44 +571,12 @@ export function MesasDashboard() {
               setModalTransferir(false);
               setModalDetalhes(false);
               setMesaSelecionada(null);
-              await fetchMesas(true); 
-            }}
-          />
-        )}
-        
-        {/* Modal de Juntar Mesa */}
-        {modalJuntar && mesaSelecionada && (
-          <ModalJuntarMesa
-            mesaOrigem={mesaSelecionada}
-            mesasOcupadas={mesasOcupadasParaJuntar}
-            onClose={() => setModalJuntar(false)}
-            onJuntado={async () => {
-              setModalJuntar(false);
-              setModalDetalhes(false);
-              setMesaSelecionada(null);
-              await fetchMesas(true); 
+              await fetchMesas(false);
             }}
           />
         )}
 
-        {/* Modal de Finalizar Caixa */}
-        {modalFinalizarCaixa && mesaSelecionada && (
-          <ModalFinalizarCaixa
-            mesa={mesaSelecionada}
-            empresaInfo={empresaInfo} // <-- NOVO: Passar info da empresa
-            onClose={() => setModalFinalizarCaixa(false)}
-            onFinalizado={async () => {
-              // Callback de sucesso da API
-              // O modal *não* fecha sozinho, ele fica aberto para impressão
-              // Vamos apenas recarregar os dados por trás
-              await fetchMesas(true); 
-              setModalDetalhes(false);
-              setMesaSelecionada(null);
-            }}
-          />
-        )}
-
-        {/* Modal de Confirmação */}
+        {/* Modal de Confirmação (NOVO) */}
         {confirmModalProps?.isOpen && (
           <ModalConfirmacao
             isOpen={true}

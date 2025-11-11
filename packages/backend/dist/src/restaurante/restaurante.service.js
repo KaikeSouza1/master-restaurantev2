@@ -171,40 +171,12 @@ let RestauranteService = class RestauranteService {
     }
     async finalizarPedidoNfce(codseq) {
         console.log(`Finalizando pedido ${codseq} para emissor NFCe...`);
-        const result = await this.prisma.quiosque.updateMany({
-            where: { codseq: codseq, vda_finalizada: 'N' },
+        return this.prisma.quiosque.update({
+            where: { codseq },
             data: {
                 vda_finalizada: 'S',
                 data_hora_finalizada: new Date(),
                 obs: 'FINALIZADO',
-            },
-        });
-        if (result.count === 0) {
-            console.warn(`Pedido ${codseq} já estava finalizado ou não foi encontrado.`);
-        }
-        return this.prisma.quiosque.findUnique({ where: { codseq } });
-    }
-    async calcularTotais(codseq, tx) {
-        const totalItens = await tx.quitens.aggregate({
-            _sum: {
-                total: true,
-            },
-            where: {
-                codseq_qu: codseq,
-            },
-        });
-        const subTotal = totalItens._sum.total || new library_1.Decimal(0);
-        const pedido = await tx.quiosque.findUnique({
-            where: { codseq },
-            select: { val_taxa_entrega: true },
-        });
-        const taxaEntrega = new library_1.Decimal(pedido?.val_taxa_entrega || 0);
-        const totalGeral = subTotal.plus(taxaEntrega);
-        return tx.quiosque.update({
-            where: { codseq },
-            data: {
-                sub_total_geral: subTotal,
-                total: totalGeral,
             },
         });
     }
@@ -282,6 +254,9 @@ let RestauranteService = class RestauranteService {
         if (quiosque.vda_finalizada !== 'N') {
             throw new common_1.ConflictException(`Pedido ${codseq} não está aberto.`);
         }
+        const subTotalItensNovos = itens.reduce((acc, item) => {
+            return acc + (Number(item.unitario) || 0) * (Number(item.qtd) || 0);
+        }, 0);
         try {
             return await this.prisma.$transaction(async (tx) => {
                 const maxQuitens = await tx.quitens.aggregate({
@@ -304,15 +279,20 @@ let RestauranteService = class RestauranteService {
                 await tx.quitens.createMany({
                     data: itensParaSalvar,
                 });
-                await this.calcularTotais(codseq, tx);
-                await tx.quiosque.update({
-                    where: { codseq },
-                    data: { obs: 'NOVO' },
-                });
-                return tx.quiosque.findUnique({
-                    where: { codseq },
+                const subTotalAtual = Number(quiosque.sub_total_geral);
+                const totalAtual = Number(quiosque.total);
+                const novoSubTotal = subTotalAtual + subTotalItensNovos;
+                const novoTotal = totalAtual + subTotalItensNovos;
+                const quiosqueAtualizado = await tx.quiosque.update({
+                    where: { codseq: codseq },
+                    data: {
+                        sub_total_geral: new library_1.Decimal(novoSubTotal.toFixed(2)),
+                        total: new library_1.Decimal(novoTotal.toFixed(2)),
+                        obs: 'NOVO',
+                    },
                     include: { quitens: true },
                 });
+                return quiosqueAtualizado;
             });
         }
         catch (error) {
@@ -351,127 +331,6 @@ let RestauranteService = class RestauranteService {
     }
     async liberarMesa(codseq) {
         return this.finalizarPedidoNfce(codseq);
-    }
-    async juntarMesas(dto) {
-        const { codseqOrigem, codseqDestino } = dto;
-        if (codseqOrigem === codseqDestino) {
-            throw new common_1.HttpException('Mesa de origem e destino não podem ser iguais', common_1.HttpStatus.BAD_REQUEST);
-        }
-        return this.prisma.$transaction(async (tx) => {
-            const mesaOrigem = await tx.quiosque.findFirst({
-                where: { codseq: codseqOrigem, vda_finalizada: 'N' },
-            });
-            const mesaDestino = await tx.quiosque.findFirst({
-                where: { codseq: codseqDestino, vda_finalizada: 'N' },
-            });
-            if (!mesaOrigem) {
-                throw new common_1.NotFoundException(`Mesa de origem #${codseqOrigem} não encontrada ou já finalizada.`);
-            }
-            if (!mesaDestino) {
-                throw new common_1.NotFoundException(`Mesa de destino #${codseqDestino} não encontrada ou já finalizada.`);
-            }
-            if (mesaDestino.obs === 'PAGAMENTO') {
-                throw new common_1.ConflictException(`Mesa de destino #${mesaDestino.num_quiosque} já está em pagamento e não pode ser juntada.`);
-            }
-            await tx.quitens.updateMany({
-                where: {
-                    codseq_qu: codseqOrigem,
-                },
-                data: {
-                    codseq_qu: codseqDestino,
-                },
-            });
-            const mesaDestinoAtualizada = await this.calcularTotais(codseqDestino, tx);
-            await tx.quiosque.update({
-                where: { codseq: codseqOrigem },
-                data: {
-                    vda_finalizada: 'S',
-                    obs: `JUNTO COM MESA ${mesaDestino.num_quiosque} (Pedido #${codseqDestino})`,
-                    sub_total_geral: 0,
-                    total: 0,
-                    data_hora_finalizada: new Date(),
-                },
-            });
-            return tx.quiosque.findUnique({
-                where: { codseq: mesaDestinoAtualizada.codseq },
-                include: {
-                    quitens: {
-                        orderBy: {
-                            codseq: 'asc',
-                        },
-                    },
-                },
-            });
-        });
-    }
-    async finalizarMesaCaixa(codseq, dto, user) {
-        const agora = new Date();
-        const timeZone = 'America/Sao_Paulo';
-        const formatadorData = new Intl.DateTimeFormat('en-CA', {
-            timeZone,
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-        });
-        const dataBrasil = formatadorData.format(agora);
-        const formatadorPartes = new Intl.DateTimeFormat('en-US', {
-            timeZone,
-            hour: 'numeric',
-            minute: 'numeric',
-            second: 'numeric',
-            hourCycle: 'h23'
-        });
-        const partes = formatadorPartes.formatToParts(agora).reduce((acc, part) => {
-            acc[part.type] = part.value;
-            return acc;
-        }, {});
-        const horaBrasilComoObjetoDate = new Date(Date.UTC(1970, 0, 1, parseInt(partes.hour, 10), parseInt(partes.minute, 10), parseInt(partes.second, 10)));
-        return this.prisma.$transaction(async (tx) => {
-            const mesa = await tx.quiosque.findFirst({
-                where: {
-                    codseq: codseq,
-                    vda_finalizada: 'N',
-                },
-            });
-            if (!mesa) {
-                throw new common_1.NotFoundException(`Mesa (Pedido #${codseq}) não encontrada ou já está finalizada.`);
-            }
-            if (mesa.obs !== 'PAGAMENTO') {
-                throw new common_1.ConflictException(`Mesa #${mesa.num_quiosque} precisa estar com o status 'PAGAMENTO' para ser finalizada no caixa.`);
-            }
-            const maxCaixa = await tx.caixa.aggregate({
-                _max: { codseq: true },
-            });
-            const proximoCodseqCaixa = (maxCaixa._max.codseq || 0) + 1;
-            await tx.caixa.create({
-                data: {
-                    codseq: proximoCodseqCaixa,
-                    datai: new Date(dataBrasil),
-                    historico: `VENDA MESA ${mesa.num_quiosque} (PEDIDO #${mesa.codseq})`,
-                    debito: 0,
-                    credito: mesa.total,
-                    acumular: 'S',
-                    tipo: 'VENDA',
-                    num_caixa: dto.num_caixa || 1,
-                    cod_forma_pagto: dto.cod_forma_pagto,
-                    codven: mesa.codseq,
-                    hora_inclusao: horaBrasilComoObjetoDate,
-                    data_i: new Date(dataBrasil),
-                    hora_i: horaBrasilComoObjetoDate,
-                    id_user_gpw: user.id,
-                    caixa_aberto: true,
-                },
-            });
-            const mesaFinalizada = await tx.quiosque.update({
-                where: { codseq: codseq },
-                data: {
-                    vda_finalizada: 'S',
-                    data_hora_finalizada: new Date(),
-                    obs: 'FINALIZADO (CAIXA)',
-                },
-            });
-            return mesaFinalizada;
-        });
     }
 };
 exports.RestauranteService = RestauranteService;

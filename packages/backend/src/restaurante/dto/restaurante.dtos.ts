@@ -1,4 +1,3 @@
-// packages/backend/src/restaurante/dto/restaurante.dtos.ts
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -86,28 +85,4 @@ export class AtualizarStatusDto {
   @IsString()
   @IsNotEmpty()
   status: string;
-}
-
-// ==========================================================
-// <-- NOVOS DTOS AQUI -->
-// ==========================================================
-
-export class JuntarMesasDto {
-  @IsInt()
-  @IsNotEmpty()
-  codseqOrigem: number;
-
-  @IsInt()
-  @IsNotEmpty()
-  codseqDestino: number;
-}
-
-export class FinalizarCaixaDto {
-  @IsInt()
-  @IsNotEmpty()
-  cod_forma_pagto: number;
-
-  @IsInt()
-  @IsOptional()
-  num_caixa?: number;
 }

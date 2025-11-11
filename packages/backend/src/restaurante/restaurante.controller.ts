@@ -1,4 +1,4 @@
-// packages/backend/src/restaurante/restaurante.controller.ts
+// master-restaurante-v2/packages/backend/src/restaurante/restaurante.controller.ts
 
 import {
   Controller,
@@ -18,11 +18,9 @@ import {
   AdicionarItensDto,
   TransferirMesaDto,
   AtualizarStatusDto,
-  JuntarMesasDto, 
-  FinalizarCaixaDto,
 } from './dto/restaurante.dtos';
 import { AdminAuthGuard, JwtAuthGuard } from 'src/auth/auth.guard';
-import type { Request } from 'express'; 
+import type { Request } from 'express'; // CORREÇÃO TS1272: Importa apenas o tipo
 
 // Interface para saber o que vem no req.user
 interface AuthenticatedUser {
@@ -32,7 +30,7 @@ interface AuthenticatedUser {
   nome: string;
 }
 
-@Controller('restaurante') 
+@Controller('restaurante') // Novo prefixo: /restaurante
 export class RestauranteController {
   constructor(private readonly restauranteService: RestauranteService) {}
 
@@ -152,25 +150,8 @@ export class RestauranteController {
   }
   
   @UseGuards(AdminAuthGuard)
-  @Patch('admin/mesas/liberar/:codseq') // Libera a mesa (Finaliza para NFCe)
+  @Patch('admin/mesas/liberar/:codseq') // Libera a mesa (Finaliza)
   async liberarMesa(@Param('codseq', ParseIntPipe) codseq: number) {
     return this.restauranteService.liberarMesa(codseq);
-  }
-
-  @UseGuards(AdminAuthGuard)
-  @Patch('admin/mesas/juntar')
-  async juntarMesas(@Body() dto: JuntarMesasDto) {
-    return this.restauranteService.juntarMesas(dto);
-  }
-
-  @UseGuards(AdminAuthGuard)
-  @Patch('admin/mesas/finalizar-caixa/:codseq')
-  async finalizarMesaCaixa(
-    @Param('codseq', ParseIntPipe) codseq: number,
-    @Body() dto: FinalizarCaixaDto,
-    @Req() req: Request, // Pega a requisição para saber o usuário logado
-  ) {
-    const user = req.user as AuthenticatedUser;
-    return this.restauranteService.finalizarMesaCaixa(codseq, dto, user);
   }
 }

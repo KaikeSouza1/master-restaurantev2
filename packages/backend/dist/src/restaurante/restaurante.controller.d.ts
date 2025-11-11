@@ -1,5 +1,5 @@
 import { RestauranteService } from './restaurante.service';
-import { CreatePedidoDto, AbrirMesaDto, AdicionarItensDto, TransferirMesaDto, AtualizarStatusDto, JuntarMesasDto, FinalizarCaixaDto } from './dto/restaurante.dtos';
+import { CreatePedidoDto, AbrirMesaDto, AdicionarItensDto, TransferirMesaDto, AtualizarStatusDto } from './dto/restaurante.dtos';
 import type { Request } from 'express';
 export declare class RestauranteController {
     private readonly restauranteService;
@@ -126,7 +126,7 @@ export declare class RestauranteController {
         data_hora_finalizada: Date | null;
         ean: string;
         loja_virtual: boolean | null;
-    } | null>;
+    }>;
     getMesasStatus(): Promise<({
         quitens: {
             descricao: string | null;
@@ -170,7 +170,7 @@ export declare class RestauranteController {
         ean: string;
         loja_virtual: boolean | null;
     }>;
-    adicionarItensMesa(codseq: number, dto: AdicionarItensDto): Promise<({
+    adicionarItensMesa(codseq: number, dto: AdicionarItensDto): Promise<{
         quitens: {
             codprod: import("@prisma/client/runtime/library").Decimal | null;
             descricao: string | null;
@@ -197,7 +197,7 @@ export declare class RestauranteController {
         data_hora_finalizada: Date | null;
         ean: string;
         loja_virtual: boolean | null;
-    }) | null>;
+    }>;
     transferirMesa(codseq: number, dto: TransferirMesaDto): Promise<{
         obs: string | null;
         tipo: string | null;
@@ -233,51 +233,6 @@ export declare class RestauranteController {
         loja_virtual: boolean | null;
     }>;
     liberarMesa(codseq: number): Promise<{
-        obs: string | null;
-        tipo: string | null;
-        nome_cli_esp: string | null;
-        fone_esp: string | null;
-        cod_endereco: number | null;
-        val_taxa_entrega: import("@prisma/client/runtime/library").Decimal | null;
-        codseq: number;
-        num_quiosque: number | null;
-        data_hora_abertura: Date | null;
-        vda_finalizada: string | null;
-        sub_total_geral: import("@prisma/client/runtime/library").Decimal | null;
-        total: import("@prisma/client/runtime/library").Decimal | null;
-        data_hora_finalizada: Date | null;
-        ean: string;
-        loja_virtual: boolean | null;
-    } | null>;
-    juntarMesas(dto: JuntarMesasDto): Promise<({
-        quitens: {
-            codprod: import("@prisma/client/runtime/library").Decimal | null;
-            descricao: string | null;
-            qtd: import("@prisma/client/runtime/library").Decimal | null;
-            unitario: import("@prisma/client/runtime/library").Decimal | null;
-            obs: string | null;
-            codseq: number;
-            total: import("@prisma/client/runtime/library").Decimal | null;
-            codseq_qu: number | null;
-        }[];
-    } & {
-        obs: string | null;
-        tipo: string | null;
-        nome_cli_esp: string | null;
-        fone_esp: string | null;
-        cod_endereco: number | null;
-        val_taxa_entrega: import("@prisma/client/runtime/library").Decimal | null;
-        codseq: number;
-        num_quiosque: number | null;
-        data_hora_abertura: Date | null;
-        vda_finalizada: string | null;
-        sub_total_geral: import("@prisma/client/runtime/library").Decimal | null;
-        total: import("@prisma/client/runtime/library").Decimal | null;
-        data_hora_finalizada: Date | null;
-        ean: string;
-        loja_virtual: boolean | null;
-    }) | null>;
-    finalizarMesaCaixa(codseq: number, dto: FinalizarCaixaDto, req: Request): Promise<{
         obs: string | null;
         tipo: string | null;
         nome_cli_esp: string | null;

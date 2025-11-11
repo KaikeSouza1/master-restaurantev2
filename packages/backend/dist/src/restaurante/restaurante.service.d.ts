@@ -1,5 +1,5 @@
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreatePedidoDto, JuntarMesasDto, PedidoItemDto, FinalizarCaixaDto } from './dto/restaurante.dtos';
+import { CreatePedidoDto, PedidoItemDto } from './dto/restaurante.dtos';
 import { Prisma } from '@prisma/client';
 interface AuthenticatedUser {
     id: number;
@@ -132,8 +132,7 @@ export declare class RestauranteService {
         data_hora_finalizada: Date | null;
         ean: string;
         loja_virtual: boolean | null;
-    } | null>;
-    private calcularTotais;
+    }>;
     getMesasStatus(): Promise<({
         quitens: {
             descricao: string | null;
@@ -177,7 +176,7 @@ export declare class RestauranteService {
         ean: string;
         loja_virtual: boolean | null;
     }>;
-    adicionarItensMesa(codseq: number, itens: PedidoItemDto[]): Promise<({
+    adicionarItensMesa(codseq: number, itens: PedidoItemDto[]): Promise<{
         quitens: {
             codprod: Prisma.Decimal | null;
             descricao: string | null;
@@ -204,7 +203,7 @@ export declare class RestauranteService {
         data_hora_finalizada: Date | null;
         ean: string;
         loja_virtual: boolean | null;
-    }) | null>;
+    }>;
     transferirMesa(codseq: number, numMesaDestino: number): Promise<{
         obs: string | null;
         tipo: string | null;
@@ -240,51 +239,6 @@ export declare class RestauranteService {
         loja_virtual: boolean | null;
     }>;
     liberarMesa(codseq: number): Promise<{
-        obs: string | null;
-        tipo: string | null;
-        nome_cli_esp: string | null;
-        fone_esp: string | null;
-        cod_endereco: number | null;
-        val_taxa_entrega: Prisma.Decimal | null;
-        codseq: number;
-        num_quiosque: number | null;
-        data_hora_abertura: Date | null;
-        vda_finalizada: string | null;
-        sub_total_geral: Prisma.Decimal | null;
-        total: Prisma.Decimal | null;
-        data_hora_finalizada: Date | null;
-        ean: string;
-        loja_virtual: boolean | null;
-    } | null>;
-    juntarMesas(dto: JuntarMesasDto): Promise<({
-        quitens: {
-            codprod: Prisma.Decimal | null;
-            descricao: string | null;
-            qtd: Prisma.Decimal | null;
-            unitario: Prisma.Decimal | null;
-            obs: string | null;
-            codseq: number;
-            total: Prisma.Decimal | null;
-            codseq_qu: number | null;
-        }[];
-    } & {
-        obs: string | null;
-        tipo: string | null;
-        nome_cli_esp: string | null;
-        fone_esp: string | null;
-        cod_endereco: number | null;
-        val_taxa_entrega: Prisma.Decimal | null;
-        codseq: number;
-        num_quiosque: number | null;
-        data_hora_abertura: Date | null;
-        vda_finalizada: string | null;
-        sub_total_geral: Prisma.Decimal | null;
-        total: Prisma.Decimal | null;
-        data_hora_finalizada: Date | null;
-        ean: string;
-        loja_virtual: boolean | null;
-    }) | null>;
-    finalizarMesaCaixa(codseq: number, dto: FinalizarCaixaDto, user: AuthenticatedUser): Promise<{
         obs: string | null;
         tipo: string | null;
         nome_cli_esp: string | null;
