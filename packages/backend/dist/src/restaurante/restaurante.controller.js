@@ -68,6 +68,13 @@ let RestauranteController = class RestauranteController {
     async liberarMesa(codseq) {
         return this.restauranteService.liberarMesa(codseq);
     }
+    async juntarMesas(dto) {
+        return this.restauranteService.juntarMesas(dto);
+    }
+    async finalizarMesaCaixa(codseq, dto, req) {
+        const user = req.user;
+        return this.restauranteService.finalizarMesaCaixa(codseq, dto, user);
+    }
 };
 exports.RestauranteController = RestauranteController;
 __decorate([
@@ -184,6 +191,24 @@ __decorate([
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", Promise)
 ], RestauranteController.prototype, "liberarMesa", null);
+__decorate([
+    (0, common_1.UseGuards)(auth_guard_1.AdminAuthGuard),
+    (0, common_1.Patch)('admin/mesas/juntar'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [restaurante_dtos_1.JuntarMesasDto]),
+    __metadata("design:returntype", Promise)
+], RestauranteController.prototype, "juntarMesas", null);
+__decorate([
+    (0, common_1.UseGuards)(auth_guard_1.AdminAuthGuard),
+    (0, common_1.Patch)('admin/mesas/finalizar-caixa/:codseq'),
+    __param(0, (0, common_1.Param)('codseq', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, restaurante_dtos_1.FinalizarCaixaDto, Object]),
+    __metadata("design:returntype", Promise)
+], RestauranteController.prototype, "finalizarMesaCaixa", null);
 exports.RestauranteController = RestauranteController = __decorate([
     (0, common_1.Controller)('restaurante'),
     __metadata("design:paramtypes", [restaurante_service_1.RestauranteService])

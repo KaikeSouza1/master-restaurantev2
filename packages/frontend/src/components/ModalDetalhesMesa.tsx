@@ -3,19 +3,20 @@
 import ReactModal from 'react-modal';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Mesa } from '../types';
-import { formatCurrency, formatTimeFromISO } from '../utils/helpers';
+import { formatCurrency } from '../utils/helpers';
 import {
   X,
   PlusCircle,
   ArrowRight,
-  Printer,
+  Printer, 
   CheckCircle,
   DollarSign,
   Info,
   Clock,
   Package,
   Sparkles,
-  ChefHat
+  ChefHat,
+  Combine, 
 } from 'lucide-react';
 
 interface ModalProps {
@@ -23,9 +24,11 @@ interface ModalProps {
   onClose: () => void;
   onAdicionarItens: () => void;
   onTransferir: () => void;
+  onJuntar: () => void; 
   onFecharConta: () => void;
-  onFinalizarMesa: () => void;
-  onFecharMesaVazia: () => void; // NOVO: Função para fechar mesa sem itens
+  onFinalizarMesa: () => void; // (NFCe)
+  onFinalizarCaixa: () => void; // (Imprimir/Caixa)
+  onFecharMesaVazia: () => void; 
 }
 
 export function ModalDetalhesMesa({
@@ -33,14 +36,16 @@ export function ModalDetalhesMesa({
   onClose,
   onAdicionarItens,
   onTransferir,
+  onJuntar,
   onFecharConta,
   onFinalizarMesa,
-  onFecharMesaVazia, // NOVO
+  onFinalizarCaixa, 
+  onFecharMesaVazia,
 }: ModalProps) {
   const status = (mesa.obs || 'NOVO').toUpperCase();
   const isPagamento = status === 'PAGAMENTO';
   const observacaoAtual = (mesa.obs !== 'PAGAMENTO' && mesa.obs !== 'NOVO' ? mesa.obs : '') || '';
-  const mesaVazia = mesa.quitens.length === 0; // NOVO: Verifica se a mesa está vazia
+  const mesaVazia = mesa.quitens.length === 0;
 
   const statusConfig = isPagamento 
     ? { bg: 'bg-gradient-to-r from-yellow-500 to-amber-600', text: 'Aguardando Pagamento', icon: DollarSign }
@@ -220,15 +225,21 @@ export function ModalDetalhesMesa({
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={onFinalizarMesa}
-                  className="col-span-2 bg-gradient-to-r from-brand-accent to-green-600 text-white py-5 rounded-xl font-bold text-lg hover:shadow-2xl transition-all flex items-center justify-center space-x-3 relative overflow-hidden group"
+                  className="col-span-2 bg-gradient-to-r from-brand-accent to-green-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all flex items-center justify-center space-x-3 relative overflow-hidden group"
                 >
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  >
-                    <CheckCircle size={28} />
-                  </motion.div>
-                  <span>Liberar Mesa & Emitir NFCe</span>
+                  <CheckCircle size={24} />
+                  <span>Finalizar (Emissor NFCe)</span>
+                  <div className="absolute inset-0 bg-white/20 translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                </motion.button>
+                
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={onFinalizarCaixa}
+                  className="col-span-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all flex items-center justify-center space-x-3 relative overflow-hidden group"
+                >
+                  <Printer size={24} />
+                  <span>Finalizar (Imprimir/Caixa)</span>
                   <div className="absolute inset-0 bg-white/20 translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
                 </motion.button>
                 
@@ -236,7 +247,7 @@ export function ModalDetalhesMesa({
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={onAdicionarItens}
-                  className="col-span-2 bg-zinc-500 text-white py-3 rounded-xl font-semibold hover:bg-zinc-600 transition-all flex items-center justify-center space-x-2"
+                  className="col-span-2 bg-zinc-500 text-white py-3 rounded-xl font-semibold hover:bg-zinc-600 transition-all flex items-center justify-center space-x-2 mt-2"
                 >
                   <PlusCircle size={20} />
                   <span>Reabrir / Adicionar Itens</span>
@@ -244,7 +255,7 @@ export function ModalDetalhesMesa({
               </>
             ) : (
               <>
-                {/* NOVO: Botão de Fechar Mesa Vazia */}
+                {/* Botão de Fechar Mesa Vazia */}
                 {mesaVazia && (
                   <motion.button
                     whileHover={{ scale: 1.02 }}
@@ -281,8 +292,20 @@ export function ModalDetalhesMesa({
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
+                  onClick={onJuntar}
+                  disabled={mesaVazia}
+                  className="bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition-all flex items-center justify-center space-x-2 shadow-md disabled:opacity-50"
+                >
+                  <Combine size={20} />
+                  <span>Juntar Mesa</span>
+                </motion.button>
+                
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={onFecharConta}
-                  className="bg-gradient-to-r from-red-600 to-red-700 text-white py-3 rounded-xl font-semibold hover:shadow-xl transition-all flex items-center justify-center space-x-2"
+                  disabled={mesaVazia}
+                  className="col-span-2 bg-gradient-to-r from-red-600 to-red-700 text-white py-3 rounded-xl font-semibold hover:shadow-xl transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
                 >
                   <DollarSign size={20} />
                   <span>Solicitar Conta</span>

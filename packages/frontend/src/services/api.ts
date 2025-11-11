@@ -1,4 +1,5 @@
-// master-restaurante-v2/packages/frontend/src/services/api.ts
+// packages/frontend/src/services/api.ts
+
 import axios from 'axios';
 import type {
   Categoria, 
@@ -8,7 +9,8 @@ import type {
   PedidoItemDto, 
   Produto, 
   Quiosque,
-  EmpresaInfo
+  EmpresaInfo,
+  FinalizarCaixaDto,
 } from '../types';
 
 // ==========================================================
@@ -124,7 +126,17 @@ export const solicitarFechamento = async (codseq: number): Promise<Mesa> => {
   return response.data;
 };
 
+export const juntarMesas = async (codseqOrigem: number, codseqDestino: number): Promise<Mesa> => {
+  const response = await apiClient.patch(`/admin/mesas/juntar`, { codseqOrigem, codseqDestino });
+  return response.data;
+};
+
 export const liberarMesa = async (codseq: number): Promise<Mesa> => {
   const response = await apiClient.patch(`/admin/mesas/liberar/${codseq}`);
+  return response.data;
+};
+
+export const finalizarMesaCaixa = async (codseq: number, dto: FinalizarCaixaDto): Promise<Mesa> => {
+  const response = await apiClient.patch(`/admin/mesas/finalizar-caixa/${codseq}`, dto);
   return response.data;
 };

@@ -25,3 +25,11 @@ export declare class TransferirMesaDto {
 export declare class AtualizarStatusDto {
     status: string;
 }
+export declare class JuntarMesasDto {
+    codseqOrigem: number;
+    codseqDestino: number;
+}
+export declare class FinalizarCaixaDto {
+    cod_forma_pagto: number;
+    num_caixa?: number;
+}
