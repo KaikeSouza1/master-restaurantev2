@@ -1,4 +1,3 @@
-// packages/backend/src/restaurante/dto/restaurante.dtos.ts
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -44,7 +43,7 @@ export class CreatePedidoDto {
   @IsString()
   @IsOptional()
   fone_esp?: string;
-  
+
   @IsInt()
   @IsOptional()
   cod_endereco?: number;
@@ -88,10 +87,6 @@ export class AtualizarStatusDto {
   status: string;
 }
 
-// ==========================================================
-// <-- NOVOS DTOS AQUI -->
-// ==========================================================
-
 export class JuntarMesasDto {
   @IsInt()
   @IsNotEmpty()
@@ -110,4 +105,76 @@ export class FinalizarCaixaDto {
   @IsInt()
   @IsOptional()
   num_caixa?: number;
+}
+
+// ==========================================================
+// DIVISÃO DE CONTA (CONTROLE WEB)
+// ==========================================================
+
+export class PagamentoParcialDto {
+  @IsInt()
+  @Min(1)
+  pessoa_numero: number; // Pessoa 1, 2, 3...
+
+  @IsString()
+  @IsOptional()
+  nome_pessoa?: string; // Ex: "João", "Maria" (opcional)
+
+  @IsNumber()
+  @Min(0.01)
+  valor_pago: number; // Quanto essa pessoa pagou
+
+  @IsInt()
+  forma_pagamento: number; // ID da forma de pagamento (1=Dinheiro, 2=PIX...)
+}
+
+export class RegistrarPagamentoParcialDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PagamentoParcialDto)
+  pagamentos: PagamentoParcialDto[];
+}
+
+// Response do controle de divisão
+export interface DivisaoContaStatus {
+  codseq: number;
+  total_conta: number;
+  total_pago: number;
+  total_restante: number;
+  pagamentos: Array<{
+    pessoa_numero: number;
+    nome_pessoa?: string;
+    valor_pago: number;
+    forma_pagamento: number;
+    data_hora: string;
+  }>;
+  pode_finalizar: boolean; // true quando total_restante = 0
+}
+
+// ==========================================================
+// REMOÇÃO DE ITENS
+// ==========================================================
+
+export class RemoverItemDto {
+  @IsInt()
+  @IsNotEmpty()
+  codseq_item: number; // ID do item em quitens
+
+  @IsString()
+  @IsNotEmpty()
+  motivo: string; // Ex: "Cliente desistiu", "Erro no pedido"
+}
+
+export class EditarQuantidadeItemDto {
+  @IsInt()
+  @IsNotEmpty()
+  codseq_item: number;
+
+  @IsNumber()
+  @Min(0.01)
+  nova_quantidade: number;
+
+  @IsString()
+  @IsOptional()
+  motivo?: string;
 }

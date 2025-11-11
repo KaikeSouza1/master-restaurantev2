@@ -7,10 +7,9 @@ import {
   abrirMesa,
   solicitarFechamento,
   liberarMesa,
-  finalizarMesaCaixa,
-  getEmpresaInfo, // <-- NOVO: Importar
+  getEmpresaInfo,
 } from '../services/api';
-import type { Mesa, EmpresaInfo } from '../types'; // <-- NOVO: Importar EmpresaInfo
+import type { Mesa, EmpresaInfo } from '../types';
 import { MesaCardDashboard } from '../components/MesaCardDashboard';
 import { ModalDetalhesMesa } from '../components/ModalDetalhesMesa';
 import { ModalAdicionarItens } from '../components/ModalAdicionarItens';
@@ -63,7 +62,7 @@ export function MesasDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const [empresaInfo, setEmpresaInfo] = useState<EmpresaInfo | null>(null); // <-- NOVO: Estado para info da empresa
+  const [empresaInfo, setEmpresaInfo] = useState<EmpresaInfo | null>(null);
 
   const [mesaSelecionada, setMesaSelecionada] = useState<Mesa | null>(null);
   const [modalDetalhes, setModalDetalhes] = useState(false);
@@ -84,7 +83,6 @@ export function MesasDashboard() {
     variant?: 'danger' | 'success' | 'default';
   } | null>(null);
 
-  // Função helper para abrir o modal de confirmação
   const askForConfirmation = (
     title: string,
     message: React.ReactNode,
@@ -111,7 +109,6 @@ export function MesasDashboard() {
   useEffect(() => {
     fetchMesas(true);
     
-    // <-- NOVO: Buscar info da empresa -->
     getEmpresaInfo()
       .then(setEmpresaInfo)
       .catch(err => {
@@ -165,7 +162,7 @@ export function MesasDashboard() {
     try {
       await promise;
     } catch (err) {
-      // O toast.promise já cuida do erro
+      // Erro tratado
     } finally {
       setLoading(false);
     }
@@ -221,7 +218,6 @@ export function MesasDashboard() {
     );
   };
 
-  // Esta é a função para (NFCe)
   const handleLiberarMesa = async () => {
     if (!mesaSelecionada || !mesaSelecionada.codseq) return;
 
@@ -276,10 +272,20 @@ export function MesasDashboard() {
     );
   };
 
-  // Esta é a nova função para (Imprimir/Caixa)
+  // ========== CORREÇÃO CRÍTICA ==========
+  // Só abre o modal de finalizar caixa se a mesa estiver em PAGAMENTO
   const handleFinalizarCaixa = () => {
     if (!mesaSelecionada || !mesaSelecionada.codseq) return;
-    setModalFinalizarCaixa(true); // Apenas abre o novo modal
+    
+    // VALIDAÇÃO: Só permite abrir se estiver em PAGAMENTO
+    const status = (mesaSelecionada.obs || '').toUpperCase();
+    if (status !== 'PAGAMENTO') {
+      toast.error('Esta mesa não está em status de PAGAMENTO!');
+      console.error('Tentativa de finalizar mesa fora do status PAGAMENTO:', mesaSelecionada);
+      return;
+    }
+    
+    setModalFinalizarCaixa(true);
   };
 
   const handleFecharMesaVazia = async () => {
@@ -393,7 +399,6 @@ export function MesasDashboard() {
 
   const mesasFiltradas = mesasCompletas
     .filter((mesa) => {
-      // 1. Filtro por Status
       if (filtroStatus === 'TODAS') return true;
       if (filtroStatus === 'LIVRE') return mesa.codseq === 0;
       if (filtroStatus === 'OCUPADA')
@@ -402,7 +407,6 @@ export function MesasDashboard() {
       return true;
     })
     .filter((mesa) => {
-      // 2. Filtro por Busca
       if (buscaMesa.trim() === '') return true; 
       
       const numMesa = mesa.num_quiosque ?? 0;
@@ -557,7 +561,7 @@ export function MesasDashboard() {
         </div>
       </div>
 
-      {/* Grid de Mesas com Animação */}
+      {/* Grid de Mesas */}
       <motion.div
         layout
         className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5"
@@ -668,13 +672,15 @@ export function MesasDashboard() {
         {modalFinalizarCaixa && mesaSelecionada && (
           <ModalFinalizarCaixa
             mesa={mesaSelecionada}
-            empresaInfo={empresaInfo} // <-- NOVO: Passar info da empresa
-            onClose={() => setModalFinalizarCaixa(false)}
+            empresaInfo={empresaInfo}
+            onClose={() => {
+              setModalFinalizarCaixa(false);
+              // NÃO fecha o modal de detalhes aqui
+            }}
             onFinalizado={async () => {
-              // Callback de sucesso da API
-              // O modal *não* fecha sozinho, ele fica aberto para impressão
-              // Vamos apenas recarregar os dados por trás
+              // Recarrega os dados
               await fetchMesas(true); 
+              // Fecha os modais
               setModalDetalhes(false);
               setMesaSelecionada(null);
             }}

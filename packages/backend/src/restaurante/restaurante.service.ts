@@ -5,15 +5,15 @@ import {
   NotFoundException,
   InternalServerErrorException,
   ConflictException,
-  HttpException, 
-  HttpStatus, 
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   CreatePedidoDto,
   JuntarMesasDto,
   PedidoItemDto,
-  FinalizarCaixaDto, 
+  FinalizarCaixaDto,
 } from './dto/restaurante.dtos';
 import { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -33,7 +33,7 @@ type PrismaTx = Prisma.TransactionClient;
 export class RestauranteService {
   constructor(private prisma: PrismaService) {}
 
-  // ==========================================================
+  // = =========================================================
   // SERVIÇOS PÚBLICOS (CARDÁPIO)
   // ==========================================================
 
@@ -120,24 +120,23 @@ export class RestauranteService {
         const novoQuiosque = await tx.quiosque.create({
           data: {
             codseq: proximoCodseqQuiosque,
-            tipo: 'D', 
+            tipo: 'D',
             num_quiosque: null,
             loja_virtual: true,
             data_hora_abertura: new Date(),
             vda_finalizada: 'N',
-            obs: 'NOVO', 
-            
+            obs: 'NOVO',
+
             codcli: user.id, // Campo escalar
-            
+
             nome_cli_esp: user.nome,
             fone_esp: dto.fone_esp,
             cod_endereco: dto.cod_endereco,
             val_taxa_entrega: taxaEntrega,
             sub_total_geral: subTotal,
             total: totalGeral,
-            ean: String(proximoCodseqQuiosque), 
-          } as Prisma.quiosqueUncheckedCreateInput, 
-
+            ean: String(proximoCodseqQuiosque),
+          } as Prisma.quiosqueUncheckedCreateInput,
         });
 
         const itensParaSalvar = dto.itens.map((item) => {
@@ -155,7 +154,7 @@ export class RestauranteService {
         });
 
         await tx.quitens.createMany({
-          data: itensParaSalvar as Prisma.quitensCreateManyInput[], 
+          data: itensParaSalvar as Prisma.quitensCreateManyInput[],
         });
 
         return novoQuiosque;
@@ -173,7 +172,7 @@ export class RestauranteService {
   // ==========================================================
 
   // --- KDS ---
-  
+
   async getKdsOrders() {
     return this.prisma.quiosque.findMany({
       where: {
@@ -212,7 +211,7 @@ export class RestauranteService {
     if (!statusValidos.includes(novoStatus.toUpperCase())) {
       throw new ConflictException('Status inválido.');
     }
-    
+
     return this.prisma.quiosque.update({
       where: { codseq },
       data: { obs: novoStatus.toUpperCase() },
@@ -224,7 +223,7 @@ export class RestauranteService {
     const result = await this.prisma.quiosque.updateMany({
       where: { codseq: codseq, vda_finalizada: 'N' },
       data: {
-        vda_finalizada: 'S', 
+        vda_finalizada: 'S',
         data_hora_finalizada: new Date(),
         obs: 'FINALIZADO',
       },
@@ -238,18 +237,18 @@ export class RestauranteService {
   }
 
   // --- GESTÃO DE MESAS ---
-  
+
   /**
    * Helper para recalcular totais de um pedido (mesa/quiosque).
    * Deve ser usado dentro de uma transação (passando 'tx').
    */
-  private async calcularTotais(codseq: number, tx: PrismaTx) { 
+  private async calcularTotais(codseq: number, tx: PrismaTx) {
     const totalItens = await tx.quitens.aggregate({
       _sum: {
         total: true,
       },
       where: {
-        codseq_qu: codseq, 
+        codseq_qu: codseq,
       },
     });
 
@@ -271,7 +270,7 @@ export class RestauranteService {
       },
     });
   }
-  
+
   async getMesasStatus() {
     return this.prisma.quiosque.findMany({
       where: {
@@ -305,7 +304,9 @@ export class RestauranteService {
     });
 
     if (mesaExistente) {
-      throw new ConflictException(`A mesa ${numMesa} já está aberta (Pedido #${mesaExistente.codseq}).`);
+      throw new ConflictException(
+        `A mesa ${numMesa} já está aberta (Pedido #${mesaExistente.codseq}).`,
+      );
     }
 
     try {
@@ -320,10 +321,10 @@ export class RestauranteService {
             codseq: proximoCodseqQuiosque,
             tipo: 'M',
             num_quiosque: numMesa,
-            loja_virtual: true, 
+            loja_virtual: true,
             data_hora_abertura: new Date(),
             vda_finalizada: 'N',
-            obs: 'NOVO', 
+            obs: 'NOVO',
             val_taxa_entrega: 0,
             sub_total_geral: 0,
             total: 0,
@@ -343,13 +344,15 @@ export class RestauranteService {
     if (itens.length === 0) {
       throw new ConflictException('Nenhum item para adicionar.');
     }
-    
+
     const quiosque = await this.prisma.quiosque.findUnique({
       where: { codseq },
     });
-    
+
     if (!quiosque) {
-      throw new NotFoundException(`Pedido (Mesa) com ID ${codseq} não encontrado.`);
+      throw new NotFoundException(
+        `Pedido (Mesa) com ID ${codseq} não encontrado.`,
+      );
     }
     if (quiosque.vda_finalizada !== 'N') {
       throw new ConflictException(`Pedido ${codseq} não está aberto.`);
@@ -366,7 +369,7 @@ export class RestauranteService {
           proximoCodseqQuitens++;
           return {
             codseq: proximoCodseqQuitens,
-            codseq_qu: codseq, 
+            codseq_qu: codseq,
             codprod: item.codprod,
             descricao: item.descricao,
             qtd: item.qtd,
@@ -380,7 +383,7 @@ export class RestauranteService {
           data: itensParaSalvar as Prisma.quitensCreateManyInput[],
         });
 
-        await this.calcularTotais(codseq, tx); 
+        await this.calcularTotais(codseq, tx);
 
         await tx.quiosque.update({
           where: { codseq },
@@ -404,7 +407,9 @@ export class RestauranteService {
       where: { codseq },
     });
     if (!mesaOrigem || mesaOrigem.vda_finalizada !== 'N') {
-      throw new NotFoundException(`Mesa de origem (Pedido #${codseq}) não está aberta.`);
+      throw new NotFoundException(
+        `Mesa de origem (Pedido #${codseq}) não está aberta.`,
+      );
     }
 
     const mesaDestinoOcupada = await this.prisma.quiosque.findFirst({
@@ -435,7 +440,7 @@ export class RestauranteService {
       data: { obs: 'PAGAMENTO' },
     });
   }
-  
+
   async liberarMesa(codseq: number) {
     return this.finalizarPedidoNfce(codseq);
   }
@@ -486,7 +491,7 @@ export class RestauranteService {
       });
 
       // 3. Recalcular total da destino
-      const mesaDestinoAtualizada = await this.calcularTotais(codseqDestino, tx); 
+      const mesaDestinoAtualizada = await this.calcularTotais(codseqDestino, tx);
 
       // 4. Finalizar mesa de origem
       await tx.quiosque.update({
@@ -519,7 +524,6 @@ export class RestauranteService {
     dto: FinalizarCaixaDto,
     user: AuthenticatedUser,
   ) {
-    
     // ==========================================================
     // <-- LÓGICA DE DATA/HORA CORRIGIDA AQUI -->
     // ==========================================================
@@ -541,27 +545,29 @@ export class RestauranteService {
       hour: 'numeric',
       minute: 'numeric',
       second: 'numeric',
-      hourCycle: 'h23'
+      hourCycle: 'h23',
     });
 
     const partes = formatadorPartes.formatToParts(agora).reduce((acc, part) => {
       acc[part.type] = part.value;
       return acc;
     }, {} as Record<string, string>);
-    
+
     // 3. Cria um objeto Date "falsificado" em UTC
     // O banco de dados @db.Time só se importa com HH:mm:ss
     // Então, criamos um Date onde a hora UTC é a hora de Brasília
-    const horaBrasilComoObjetoDate = new Date(Date.UTC(
-      1970, // Ano base (ignorado pelo @db.Time)
-      0,    // Mês base (ignorado pelo @db.Time)
-      1,    // Dia base (ignorado pelo @db.Time)
-      parseInt(partes.hour, 10),    // Ex: 13
-      parseInt(partes.minute, 10),  // Ex: 53
-      parseInt(partes.second, 10)   // Ex: 00
-    ));
+    const horaBrasilComoObjetoDate = new Date(
+      Date.UTC(
+        1970, // Ano base (ignorado pelo @db.Time)
+        0, // Mês base (ignorado pelo @db.Time)
+        1, // Dia base (ignorado pelo @db.Time)
+        parseInt(partes.hour, 10), // Ex: 13
+        parseInt(partes.minute, 10), // Ex: 53
+        parseInt(partes.second, 10), // Ex: 00
+      ),
+    );
     // ==========================================================
-    
+
     return this.prisma.$transaction(async (tx) => {
       // 1. Validar a mesa (quiosque)
       const mesa = await tx.quiosque.findFirst({
@@ -596,24 +602,24 @@ export class RestauranteService {
           datai: new Date(dataBrasil), // Salva a data correta (ex: 2025-11-11)
           historico: `VENDA MESA ${mesa.num_quiosque} (PEDIDO #${mesa.codseq})`,
           debito: 0,
-          credito: mesa.total, 
-          acumular: 'S', 
+          credito: mesa.total,
+          acumular: 'S',
           tipo: 'VENDA',
-          num_caixa: dto.num_caixa || 1, 
+          num_caixa: dto.num_caixa || 1,
           cod_forma_pagto: dto.cod_forma_pagto,
-          codven: mesa.codseq, 
-          
+          codven: mesa.codseq,
+
           // ==========================================================
           // <-- CAMPOS DE HORA CORRIGIDOS -->
           // Salvamos o objeto Date "falsificado"
           // O banco salvará "13:53:00"
           // ==========================================================
-          hora_inclusao: horaBrasilComoObjetoDate, 
-          data_i: new Date(dataBrasil), 
-          hora_i: horaBrasilComoObjetoDate, 
-          
-          id_user_gpw: user.id, 
-          caixa_aberto: true, 
+          hora_inclusao: horaBrasilComoObjetoDate,
+          data_i: new Date(dataBrasil),
+          hora_i: horaBrasilComoObjetoDate,
+
+          id_user_gpw: user.id,
+          caixa_aberto: true,
         },
       });
 
@@ -623,11 +629,267 @@ export class RestauranteService {
         data: {
           vda_finalizada: 'S',
           data_hora_finalizada: new Date(), // A hora de finalização (UTC)
-          obs: 'FINALIZADO (CAIXA)', 
+          obs: 'FINALIZADO (CAIXA)',
         },
       });
 
       return mesaFinalizada;
     });
   }
+
+  // ==========================================================
+  // REMOÇÃO E EDIÇÃO DE ITENS (NOVOS MÉTODOS)
+  // ==========================================================
+
+  async removerItem(
+    codseq: number,
+    codseqItem: number,
+    motivo: string,
+    userId: number, // Embora userId seja passado, não está sendo usado no log. Pode ser adicionado.
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Buscar o pedido
+      const pedido = await tx.quiosque.findUnique({
+        where: { codseq },
+        include: { quitens: true },
+      });
+
+      if (!pedido) {
+        throw new NotFoundException(`Pedido ${codseq} não encontrado`);
+      }
+
+      if (pedido.vda_finalizada === 'S') {
+        throw new ConflictException(
+          'Não é possível remover itens de pedidos finalizados',
+        );
+      }
+
+      if (pedido.obs === 'PAGAMENTO') {
+        throw new ConflictException(
+          'Não é possível remover itens de pedidos em pagamento. Reabra o pedido primeiro.',
+        );
+      }
+
+      // 2. Buscar o item
+      const item = await tx.quitens.findUnique({
+        where: { codseq: codseqItem },
+      });
+
+      if (!item || item.codseq_qu !== codseq) {
+        throw new NotFoundException('Item não encontrado neste pedido');
+      }
+
+      // 3. DELETAR o item (não usamos soft delete aqui)
+      await tx.quitens.delete({
+        where: { codseq: codseqItem },
+      });
+
+      // 4. Recalcular totais
+      const pedidoAtualizado = await this.calcularTotais(codseq, tx);
+
+      // 5. Log da remoção (salvar na obs do pedido ou criar tabela de log)
+      const dataHora = new Date().toLocaleString('pt-BR');
+      const logRemocao = `\n[${dataHora}] REMOVIDO (User: ${userId}): ${item.qtd}x ${item.descricao} - Motivo: ${motivo}`;
+
+      await tx.quiosque.update({
+        where: { codseq },
+        data: {
+          obs: (pedido.obs || '') + logRemocao,
+        },
+      });
+
+      return pedidoAtualizado;
+    });
+  }
+
+  async editarQuantidadeItem(
+    codseq: number,
+    codseqItem: number,
+    novaQtd: number,
+    motivo?: string,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const pedido = await tx.quiosque.findUnique({ where: { codseq } });
+
+      if (!pedido) {
+        throw new NotFoundException('Pedido não encontrado');
+      }
+
+      if (pedido.vda_finalizada === 'S') {
+        throw new ConflictException('Não é possível editar pedidos finalizados');
+      }
+
+      if (pedido.obs === 'PAGAMENTO') {
+        throw new ConflictException('Pedido em pagamento. Reabra para editar.');
+      }
+      
+      if (novaQtd <= 0) {
+          throw new ConflictException('A nova quantidade deve ser maior que zero. Para remover, use a função de remoção.');
+      }
+
+      const item = await tx.quitens.findUnique({
+        where: { codseq: codseqItem },
+      });
+
+      if (!item || item.codseq_qu !== codseq) {
+        throw new NotFoundException('Item não encontrado');
+      }
+
+      // Atualizar quantidade e total
+      const novoTotal = Number(item.unitario) * novaQtd;
+
+      await tx.quitens.update({
+        where: { codseq: codseqItem },
+        data: {
+          qtd: novaQtd,
+          total: novoTotal,
+        },
+      });
+
+      // Recalcular totais do pedido
+      const pedidoAtualizado = await this.calcularTotais(codseq, tx);
+
+      // Log (opcional)
+      if (motivo) {
+        const dataHora = new Date().toLocaleString('pt-BR');
+        const logEdicao = `\n[${dataHora}] EDITADO: ${item.descricao} de ${item.qtd}x para ${novaQtd}x - ${motivo}`;
+
+        await tx.quiosque.update({
+          where: { codseq },
+          data: {
+            obs: (pedido.obs || '') + logEdicao,
+          },
+        });
+      }
+
+      return pedidoAtualizado;
+    });
+  }
+
+  // ==========================================================
+  // DIVISÃO DE CONTA (CONTROLE WEB) (NOVOS MÉTODOS)
+  // ==========================================================
+
+  async registrarPagamentoParcial(
+    codseq: number,
+    pagamentos: Array<{
+      pessoa_numero: number;
+      nome_pessoa?: string;
+      valor_pago: number;
+      forma_pagamento: number;
+    }>,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const pedido = await tx.quiosque.findUnique({
+        where: { codseq },
+      });
+
+      if (!pedido) {
+        throw new NotFoundException('Pedido não encontrado');
+      }
+
+      if (pedido.obs !== 'PAGAMENTO') {
+        throw new ConflictException(
+          'Pedido precisa estar em PAGAMENTO para dividir conta',
+        );
+      }
+
+      // Criar JSON com os pagamentos (salvar em campo TEXT ou criar tabela separada)
+      // Por simplicidade, vou usar o campo 'obs' para armazenar (em produção, criar tabela)
+
+      const pagamentosAnteriores = this.extrairPagamentos(pedido.obs || '');
+      const novosPagamentos = [
+        ...pagamentosAnteriores,
+        ...pagamentos.map((p) => ({
+          ...p,
+          data_hora: new Date().toISOString(),
+        })),
+      ];
+
+      const totalPago = novosPagamentos.reduce((acc, p) => acc + p.valor_pago, 0);
+      const totalRestante = Number(pedido.total) - totalPago;
+
+      // Atualizar obs com JSON
+      const obsAtualizada = `DIVISAO_CONTA:${JSON.stringify(novosPagamentos)}`;
+
+      await tx.quiosque.update({
+        where: { codseq },
+        data: { obs: obsAtualizada },
+      });
+
+      return {
+        codseq,
+        total_conta: Number(pedido.total),
+        total_pago: totalPago,
+        total_restante: totalRestante,
+        pagamentos: novosPagamentos,
+        pode_finalizar: totalRestante <= 0.01, // Tolerância de 1 centavo
+      };
+    });
+  }
+
+  async obterStatusDivisao(codseq: number) {
+    const pedido = await this.prisma.quiosque.findUnique({
+      where: { codseq },
+    });
+
+    if (!pedido) {
+      throw new NotFoundException('Pedido não encontrado');
+    }
+
+    const pagamentos = this.extrairPagamentos(pedido.obs || '');
+    const totalPago = pagamentos.reduce((acc, p) => acc + p.valor_pago, 0);
+    const totalRestante = Number(pedido.total) - totalPago;
+
+    return {
+      codseq,
+      total_conta: Number(pedido.total),
+      total_pago: totalPago,
+      total_restante: totalRestante,
+      pagamentos,
+      pode_finalizar: totalRestante <= 0.01,
+    };
+  }
+
+  // Helper para extrair pagamentos do campo obs
+  private extrairPagamentos(obs: string): Array<any> {
+    if (!obs.startsWith('DIVISAO_CONTA:')) {
+      return [];
+    }
+
+    try {
+      const jsonStr = obs.replace('DIVISAO_CONTA:', '');
+      return JSON.parse(jsonStr);
+    } catch {
+      return [];
+    }
+  }
+
+  // Finalizar pedido dividido (vai pro NFCe como 1 pedido só)
+  async finalizarPedidoDividido(codseq: number) {
+    const status = await this.obterStatusDivisao(codseq);
+
+    if (!status.pode_finalizar) {
+      throw new ConflictException(
+        `Ainda falta pagar ${formatCurrency(
+          status.total_restante,
+        )}. Não é possível finalizar.`,
+      );
+    }
+
+    // Limpa a obs para enviar limpo pro NFCe
+    await this.prisma.quiosque.update({
+      where: { codseq },
+      data: { obs: 'FINALIZADO (DIVIDIDO)' },
+    });
+
+    // Chama a função normal de finalizar
+    return this.finalizarPedidoNfce(codseq);
+  }
+} 
+function formatCurrency(value: number): string {
+  return value.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
 }

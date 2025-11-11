@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.FinalizarCaixaDto = exports.JuntarMesasDto = exports.AtualizarStatusDto = exports.TransferirMesaDto = exports.AdicionarItensDto = exports.AbrirMesaDto = exports.CreatePedidoDto = exports.PedidoItemDto = void 0;
+exports.EditarQuantidadeItemDto = exports.RemoverItemDto = exports.RegistrarPagamentoParcialDto = exports.PagamentoParcialDto = exports.FinalizarCaixaDto = exports.JuntarMesasDto = exports.AtualizarStatusDto = exports.TransferirMesaDto = exports.AdicionarItensDto = exports.AbrirMesaDto = exports.CreatePedidoDto = exports.PedidoItemDto = void 0;
 const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
 class PedidoItemDto {
@@ -151,4 +151,76 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Number)
 ], FinalizarCaixaDto.prototype, "num_caixa", void 0);
+class PagamentoParcialDto {
+    pessoa_numero;
+    nome_pessoa;
+    valor_pago;
+    forma_pagamento;
+}
+exports.PagamentoParcialDto = PagamentoParcialDto;
+__decorate([
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
+    __metadata("design:type", Number)
+], PagamentoParcialDto.prototype, "pessoa_numero", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PagamentoParcialDto.prototype, "nome_pessoa", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0.01),
+    __metadata("design:type", Number)
+], PagamentoParcialDto.prototype, "valor_pago", void 0);
+__decorate([
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], PagamentoParcialDto.prototype, "forma_pagamento", void 0);
+class RegistrarPagamentoParcialDto {
+    pagamentos;
+}
+exports.RegistrarPagamentoParcialDto = RegistrarPagamentoParcialDto;
+__decorate([
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => PagamentoParcialDto),
+    __metadata("design:type", Array)
+], RegistrarPagamentoParcialDto.prototype, "pagamentos", void 0);
+class RemoverItemDto {
+    codseq_item;
+    motivo;
+}
+exports.RemoverItemDto = RemoverItemDto;
+__decorate([
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", Number)
+], RemoverItemDto.prototype, "codseq_item", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], RemoverItemDto.prototype, "motivo", void 0);
+class EditarQuantidadeItemDto {
+    codseq_item;
+    nova_quantidade;
+    motivo;
+}
+exports.EditarQuantidadeItemDto = EditarQuantidadeItemDto;
+__decorate([
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", Number)
+], EditarQuantidadeItemDto.prototype, "codseq_item", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0.01),
+    __metadata("design:type", Number)
+], EditarQuantidadeItemDto.prototype, "nova_quantidade", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], EditarQuantidadeItemDto.prototype, "motivo", void 0);
 //# sourceMappingURL=restaurante.dtos.js.map

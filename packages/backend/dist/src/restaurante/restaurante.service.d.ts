@@ -301,5 +301,78 @@ export declare class RestauranteService {
         ean: string;
         loja_virtual: boolean | null;
     }>;
+    removerItem(codseq: number, codseqItem: number, motivo: string, userId: number): Promise<{
+        obs: string | null;
+        tipo: string | null;
+        nome_cli_esp: string | null;
+        fone_esp: string | null;
+        cod_endereco: number | null;
+        val_taxa_entrega: Prisma.Decimal | null;
+        codseq: number;
+        num_quiosque: number | null;
+        data_hora_abertura: Date | null;
+        vda_finalizada: string | null;
+        sub_total_geral: Prisma.Decimal | null;
+        total: Prisma.Decimal | null;
+        data_hora_finalizada: Date | null;
+        ean: string;
+        loja_virtual: boolean | null;
+    }>;
+    editarQuantidadeItem(codseq: number, codseqItem: number, novaQtd: number, motivo?: string): Promise<{
+        obs: string | null;
+        tipo: string | null;
+        nome_cli_esp: string | null;
+        fone_esp: string | null;
+        cod_endereco: number | null;
+        val_taxa_entrega: Prisma.Decimal | null;
+        codseq: number;
+        num_quiosque: number | null;
+        data_hora_abertura: Date | null;
+        vda_finalizada: string | null;
+        sub_total_geral: Prisma.Decimal | null;
+        total: Prisma.Decimal | null;
+        data_hora_finalizada: Date | null;
+        ean: string;
+        loja_virtual: boolean | null;
+    }>;
+    registrarPagamentoParcial(codseq: number, pagamentos: Array<{
+        pessoa_numero: number;
+        nome_pessoa?: string;
+        valor_pago: number;
+        forma_pagamento: number;
+    }>): Promise<{
+        codseq: number;
+        total_conta: number;
+        total_pago: any;
+        total_restante: number;
+        pagamentos: any[];
+        pode_finalizar: boolean;
+    }>;
+    obterStatusDivisao(codseq: number): Promise<{
+        codseq: number;
+        total_conta: number;
+        total_pago: any;
+        total_restante: number;
+        pagamentos: any[];
+        pode_finalizar: boolean;
+    }>;
+    private extrairPagamentos;
+    finalizarPedidoDividido(codseq: number): Promise<{
+        obs: string | null;
+        tipo: string | null;
+        nome_cli_esp: string | null;
+        fone_esp: string | null;
+        cod_endereco: number | null;
+        val_taxa_entrega: Prisma.Decimal | null;
+        codseq: number;
+        num_quiosque: number | null;
+        data_hora_abertura: Date | null;
+        vda_finalizada: string | null;
+        sub_total_geral: Prisma.Decimal | null;
+        total: Prisma.Decimal | null;
+        data_hora_finalizada: Date | null;
+        ean: string;
+        loja_virtual: boolean | null;
+    } | null>;
 }
 export {};

@@ -10,6 +10,8 @@ import {
   Patch,
   UseGuards,
   Req,
+  Delete, // Importar Delete
+  ConflictException, // Importar ConflictException
 } from '@nestjs/common';
 import { RestauranteService } from './restaurante.service';
 import {
@@ -18,11 +20,11 @@ import {
   AdicionarItensDto,
   TransferirMesaDto,
   AtualizarStatusDto,
-  JuntarMesasDto, 
+  JuntarMesasDto,
   FinalizarCaixaDto,
 } from './dto/restaurante.dtos';
 import { AdminAuthGuard, JwtAuthGuard } from 'src/auth/auth.guard';
-import type { Request } from 'express'; 
+import type { Request } from 'express';
 
 // Interface para saber o que vem no req.user
 interface AuthenticatedUser {
@@ -32,7 +34,7 @@ interface AuthenticatedUser {
   nome: string;
 }
 
-@Controller('restaurante') 
+@Controller('restaurante')
 export class RestauranteController {
   constructor(private readonly restauranteService: RestauranteService) {}
 
@@ -70,9 +72,9 @@ export class RestauranteController {
   @Post('pedidos/delivery')
   async criarPedidoDelivery(
     @Body() pedidoDto: CreatePedidoDto,
-    @Req() req: Request, 
+    @Req() req: Request,
   ) {
-    const user = req.user as AuthenticatedUser; 
+    const user = req.user as AuthenticatedUser;
     return this.restauranteService.criarPedidoDelivery(pedidoDto, user);
   }
 
@@ -121,9 +123,7 @@ export class RestauranteController {
 
   @UseGuards(AdminAuthGuard)
   @Post('admin/mesas/abrir')
-  async abrirMesa(
-    @Body() dto: AbrirMesaDto,
-  ) {
+  async abrirMesa(@Body() dto: AbrirMesaDto) {
     return this.restauranteService.abrirMesa(dto.numMesa);
   }
 
@@ -150,7 +150,7 @@ export class RestauranteController {
   async solicitarFechamento(@Param('codseq', ParseIntPipe) codseq: number) {
     return this.restauranteService.solicitarFechamento(codseq);
   }
-  
+
   @UseGuards(AdminAuthGuard)
   @Patch('admin/mesas/liberar/:codseq') // Libera a mesa (Finaliza para NFCe)
   async liberarMesa(@Param('codseq', ParseIntPipe) codseq: number) {
@@ -172,5 +172,82 @@ export class RestauranteController {
   ) {
     const user = req.user as AuthenticatedUser;
     return this.restauranteService.finalizarMesaCaixa(codseq, dto, user);
+  }
+
+  // ==========================================================
+  // REMOÇÃO E EDIÇÃO DE ITENS (NOVAS ROTAS)
+  // ==========================================================
+
+  @UseGuards(AdminAuthGuard)
+  @Delete('admin/mesas/:codseq/itens/:codseqItem')
+  async removerItemMesa(
+    @Param('codseq', ParseIntPipe) codseq: number,
+    @Param('codseqItem', ParseIntPipe) codseqItem: number,
+    @Body('motivo') motivo: string,
+    @Req() req: Request,
+  ) {
+    const user = req.user as AuthenticatedUser;
+
+    if (!motivo || motivo.trim().length < 3) {
+      throw new ConflictException('Motivo é obrigatório (mínimo 3 caracteres)');
+    }
+
+    return this.restauranteService.removerItem(
+      codseq,
+      codseqItem,
+      motivo,
+      user.id,
+    );
+  }
+
+  @UseGuards(AdminAuthGuard)
+  @Patch('admin/mesas/:codseq/itens/:codseqItem/quantidade')
+  async editarQuantidadeItem(
+    @Param('codseq', ParseIntPipe) codseq: number,
+    @Param('codseqItem', ParseIntPipe) codseqItem: number,
+    @Body() body: { nova_quantidade: number; motivo?: string },
+  ) {
+    if (!body.nova_quantidade || body.nova_quantidade <= 0) {
+      throw new ConflictException('Quantidade deve ser maior que zero');
+    }
+
+    return this.restauranteService.editarQuantidadeItem(
+      codseq,
+      codseqItem,
+      body.nova_quantidade,
+      body.motivo,
+    );
+  }
+
+  // ==========================================================
+  // DIVISÃO DE CONTA (NOVAS ROTAS)
+  // ==========================================================
+
+  @UseGuards(AdminAuthGuard)
+  @Get('admin/mesas/:codseq/divisao-status')
+  async obterStatusDivisao(@Param('codseq', ParseIntPipe) codseq: number) {
+    return this.restauranteService.obterStatusDivisao(codseq);
+  }
+
+  @UseGuards(AdminAuthGuard)
+  @Post('admin/mesas/:codseq/registrar-pagamento-parcial')
+  async registrarPagamentoParcial(
+    @Param('codseq', ParseIntPipe) codseq: number,
+    @Body()
+    body: {
+      pessoa_numero: number;
+      nome_pessoa?: string;
+      valor_pago: number;
+      forma_pagamento: number;
+    },
+  ) {
+    // Registra UM pagamento por vez
+    return this.restauranteService.registrarPagamentoParcial(codseq, [body]);
+  }
+
+  @UseGuards(AdminAuthGuard)
+  @Post('admin/mesas/:codseq/finalizar-dividido')
+  async finalizarPedidoDividido(@Param('codseq', ParseIntPipe) codseq: number) {
+    return this.restauranteService.finalizarPedidoDividido(codseq);
   }
 }

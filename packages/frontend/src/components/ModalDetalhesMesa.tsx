@@ -28,7 +28,9 @@ interface ModalProps {
   onFecharConta: () => void;
   onFinalizarMesa: () => void; // (NFCe)
   onFinalizarCaixa: () => void; // (Imprimir/Caixa)
-  onFecharMesaVazia: () => void; 
+  onFecharMesaVazia: () => void;
+  onDividirConta: () => void; // NOVO
+  onEditarItens: () => void; // NOVO
 }
 
 export function ModalDetalhesMesa({

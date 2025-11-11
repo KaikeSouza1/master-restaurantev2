@@ -75,6 +75,28 @@ let RestauranteController = class RestauranteController {
         const user = req.user;
         return this.restauranteService.finalizarMesaCaixa(codseq, dto, user);
     }
+    async removerItemMesa(codseq, codseqItem, motivo, req) {
+        const user = req.user;
+        if (!motivo || motivo.trim().length < 3) {
+            throw new common_1.ConflictException('Motivo é obrigatório (mínimo 3 caracteres)');
+        }
+        return this.restauranteService.removerItem(codseq, codseqItem, motivo, user.id);
+    }
+    async editarQuantidadeItem(codseq, codseqItem, body) {
+        if (!body.nova_quantidade || body.nova_quantidade <= 0) {
+            throw new common_1.ConflictException('Quantidade deve ser maior que zero');
+        }
+        return this.restauranteService.editarQuantidadeItem(codseq, codseqItem, body.nova_quantidade, body.motivo);
+    }
+    async obterStatusDivisao(codseq) {
+        return this.restauranteService.obterStatusDivisao(codseq);
+    }
+    async registrarPagamentoParcial(codseq, body) {
+        return this.restauranteService.registrarPagamentoParcial(codseq, [body]);
+    }
+    async finalizarPedidoDividido(codseq) {
+        return this.restauranteService.finalizarPedidoDividido(codseq);
+    }
 };
 exports.RestauranteController = RestauranteController;
 __decorate([
@@ -209,6 +231,52 @@ __decorate([
     __metadata("design:paramtypes", [Number, restaurante_dtos_1.FinalizarCaixaDto, Object]),
     __metadata("design:returntype", Promise)
 ], RestauranteController.prototype, "finalizarMesaCaixa", null);
+__decorate([
+    (0, common_1.UseGuards)(auth_guard_1.AdminAuthGuard),
+    (0, common_1.Delete)('admin/mesas/:codseq/itens/:codseqItem'),
+    __param(0, (0, common_1.Param)('codseq', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Param)('codseqItem', common_1.ParseIntPipe)),
+    __param(2, (0, common_1.Body)('motivo')),
+    __param(3, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Number, String, Object]),
+    __metadata("design:returntype", Promise)
+], RestauranteController.prototype, "removerItemMesa", null);
+__decorate([
+    (0, common_1.UseGuards)(auth_guard_1.AdminAuthGuard),
+    (0, common_1.Patch)('admin/mesas/:codseq/itens/:codseqItem/quantidade'),
+    __param(0, (0, common_1.Param)('codseq', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Param)('codseqItem', common_1.ParseIntPipe)),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Number, Object]),
+    __metadata("design:returntype", Promise)
+], RestauranteController.prototype, "editarQuantidadeItem", null);
+__decorate([
+    (0, common_1.UseGuards)(auth_guard_1.AdminAuthGuard),
+    (0, common_1.Get)('admin/mesas/:codseq/divisao-status'),
+    __param(0, (0, common_1.Param)('codseq', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], RestauranteController.prototype, "obterStatusDivisao", null);
+__decorate([
+    (0, common_1.UseGuards)(auth_guard_1.AdminAuthGuard),
+    (0, common_1.Post)('admin/mesas/:codseq/registrar-pagamento-parcial'),
+    __param(0, (0, common_1.Param)('codseq', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:returntype", Promise)
+], RestauranteController.prototype, "registrarPagamentoParcial", null);
+__decorate([
+    (0, common_1.UseGuards)(auth_guard_1.AdminAuthGuard),
+    (0, common_1.Post)('admin/mesas/:codseq/finalizar-dividido'),
+    __param(0, (0, common_1.Param)('codseq', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], RestauranteController.prototype, "finalizarPedidoDividido", null);
 exports.RestauranteController = RestauranteController = __decorate([
     (0, common_1.Controller)('restaurante'),
     __metadata("design:paramtypes", [restaurante_service_1.RestauranteService])

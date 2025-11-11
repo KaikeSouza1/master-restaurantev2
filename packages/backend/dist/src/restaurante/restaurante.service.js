@@ -419,7 +419,7 @@ let RestauranteService = class RestauranteService {
             hour: 'numeric',
             minute: 'numeric',
             second: 'numeric',
-            hourCycle: 'h23'
+            hourCycle: 'h23',
         });
         const partes = formatadorPartes.formatToParts(agora).reduce((acc, part) => {
             acc[part.type] = part.value;
@@ -473,10 +473,173 @@ let RestauranteService = class RestauranteService {
             return mesaFinalizada;
         });
     }
+    async removerItem(codseq, codseqItem, motivo, userId) {
+        return this.prisma.$transaction(async (tx) => {
+            const pedido = await tx.quiosque.findUnique({
+                where: { codseq },
+                include: { quitens: true },
+            });
+            if (!pedido) {
+                throw new common_1.NotFoundException(`Pedido ${codseq} não encontrado`);
+            }
+            if (pedido.vda_finalizada === 'S') {
+                throw new common_1.ConflictException('Não é possível remover itens de pedidos finalizados');
+            }
+            if (pedido.obs === 'PAGAMENTO') {
+                throw new common_1.ConflictException('Não é possível remover itens de pedidos em pagamento. Reabra o pedido primeiro.');
+            }
+            const item = await tx.quitens.findUnique({
+                where: { codseq: codseqItem },
+            });
+            if (!item || item.codseq_qu !== codseq) {
+                throw new common_1.NotFoundException('Item não encontrado neste pedido');
+            }
+            await tx.quitens.delete({
+                where: { codseq: codseqItem },
+            });
+            const pedidoAtualizado = await this.calcularTotais(codseq, tx);
+            const dataHora = new Date().toLocaleString('pt-BR');
+            const logRemocao = `\n[${dataHora}] REMOVIDO (User: ${userId}): ${item.qtd}x ${item.descricao} - Motivo: ${motivo}`;
+            await tx.quiosque.update({
+                where: { codseq },
+                data: {
+                    obs: (pedido.obs || '') + logRemocao,
+                },
+            });
+            return pedidoAtualizado;
+        });
+    }
+    async editarQuantidadeItem(codseq, codseqItem, novaQtd, motivo) {
+        return this.prisma.$transaction(async (tx) => {
+            const pedido = await tx.quiosque.findUnique({ where: { codseq } });
+            if (!pedido) {
+                throw new common_1.NotFoundException('Pedido não encontrado');
+            }
+            if (pedido.vda_finalizada === 'S') {
+                throw new common_1.ConflictException('Não é possível editar pedidos finalizados');
+            }
+            if (pedido.obs === 'PAGAMENTO') {
+                throw new common_1.ConflictException('Pedido em pagamento. Reabra para editar.');
+            }
+            if (novaQtd <= 0) {
+                throw new common_1.ConflictException('A nova quantidade deve ser maior que zero. Para remover, use a função de remoção.');
+            }
+            const item = await tx.quitens.findUnique({
+                where: { codseq: codseqItem },
+            });
+            if (!item || item.codseq_qu !== codseq) {
+                throw new common_1.NotFoundException('Item não encontrado');
+            }
+            const novoTotal = Number(item.unitario) * novaQtd;
+            await tx.quitens.update({
+                where: { codseq: codseqItem },
+                data: {
+                    qtd: novaQtd,
+                    total: novoTotal,
+                },
+            });
+            const pedidoAtualizado = await this.calcularTotais(codseq, tx);
+            if (motivo) {
+                const dataHora = new Date().toLocaleString('pt-BR');
+                const logEdicao = `\n[${dataHora}] EDITADO: ${item.descricao} de ${item.qtd}x para ${novaQtd}x - ${motivo}`;
+                await tx.quiosque.update({
+                    where: { codseq },
+                    data: {
+                        obs: (pedido.obs || '') + logEdicao,
+                    },
+                });
+            }
+            return pedidoAtualizado;
+        });
+    }
+    async registrarPagamentoParcial(codseq, pagamentos) {
+        return this.prisma.$transaction(async (tx) => {
+            const pedido = await tx.quiosque.findUnique({
+                where: { codseq },
+            });
+            if (!pedido) {
+                throw new common_1.NotFoundException('Pedido não encontrado');
+            }
+            if (pedido.obs !== 'PAGAMENTO') {
+                throw new common_1.ConflictException('Pedido precisa estar em PAGAMENTO para dividir conta');
+            }
+            const pagamentosAnteriores = this.extrairPagamentos(pedido.obs || '');
+            const novosPagamentos = [
+                ...pagamentosAnteriores,
+                ...pagamentos.map((p) => ({
+                    ...p,
+                    data_hora: new Date().toISOString(),
+                })),
+            ];
+            const totalPago = novosPagamentos.reduce((acc, p) => acc + p.valor_pago, 0);
+            const totalRestante = Number(pedido.total) - totalPago;
+            const obsAtualizada = `DIVISAO_CONTA:${JSON.stringify(novosPagamentos)}`;
+            await tx.quiosque.update({
+                where: { codseq },
+                data: { obs: obsAtualizada },
+            });
+            return {
+                codseq,
+                total_conta: Number(pedido.total),
+                total_pago: totalPago,
+                total_restante: totalRestante,
+                pagamentos: novosPagamentos,
+                pode_finalizar: totalRestante <= 0.01,
+            };
+        });
+    }
+    async obterStatusDivisao(codseq) {
+        const pedido = await this.prisma.quiosque.findUnique({
+            where: { codseq },
+        });
+        if (!pedido) {
+            throw new common_1.NotFoundException('Pedido não encontrado');
+        }
+        const pagamentos = this.extrairPagamentos(pedido.obs || '');
+        const totalPago = pagamentos.reduce((acc, p) => acc + p.valor_pago, 0);
+        const totalRestante = Number(pedido.total) - totalPago;
+        return {
+            codseq,
+            total_conta: Number(pedido.total),
+            total_pago: totalPago,
+            total_restante: totalRestante,
+            pagamentos,
+            pode_finalizar: totalRestante <= 0.01,
+        };
+    }
+    extrairPagamentos(obs) {
+        if (!obs.startsWith('DIVISAO_CONTA:')) {
+            return [];
+        }
+        try {
+            const jsonStr = obs.replace('DIVISAO_CONTA:', '');
+            return JSON.parse(jsonStr);
+        }
+        catch {
+            return [];
+        }
+    }
+    async finalizarPedidoDividido(codseq) {
+        const status = await this.obterStatusDivisao(codseq);
+        if (!status.pode_finalizar) {
+            throw new common_1.ConflictException(`Ainda falta pagar ${formatCurrency(status.total_restante)}. Não é possível finalizar.`);
+        }
+        await this.prisma.quiosque.update({
+            where: { codseq },
+            data: { obs: 'FINALIZADO (DIVIDIDO)' },
+        });
+        return this.finalizarPedidoNfce(codseq);
+    }
 };
 exports.RestauranteService = RestauranteService;
 exports.RestauranteService = RestauranteService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService])
 ], RestauranteService);
+function formatCurrency(value) {
+    return value.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+    });
+}
 //# sourceMappingURL=restaurante.service.js.map
