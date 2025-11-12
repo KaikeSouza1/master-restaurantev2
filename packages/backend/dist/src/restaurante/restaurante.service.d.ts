@@ -301,7 +301,7 @@ export declare class RestauranteService {
         ean: string;
         loja_virtual: boolean | null;
     }>;
-    removerItem(codseq: number, codseqItem: number, motivo: string, userId: number): Promise<{
+    removerItem(codseq: number, codseqItem: number, motivo?: string): Promise<{
         obs: string | null;
         tipo: string | null;
         nome_cli_esp: string | null;
@@ -334,6 +334,18 @@ export declare class RestauranteService {
         data_hora_finalizada: Date | null;
         ean: string;
         loja_virtual: boolean | null;
+    }>;
+    calcularDivisaoSimplificada(codseq: number, numPessoas: number, itensPorPessoa: Array<{
+        codseq_item: number;
+        pessoa: number;
+    }>): Promise<{
+        codseq: number;
+        total_conta: number;
+        num_pessoas: number;
+        divisao: Record<number, {
+            itens: any[];
+            total: number;
+        }>;
     }>;
     registrarPagamentoParcial(codseq: number, pagamentos: Array<{
         pessoa_numero: number;

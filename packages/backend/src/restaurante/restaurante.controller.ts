@@ -178,24 +178,17 @@ export class RestauranteController {
   // REMOÇÃO E EDIÇÃO DE ITENS (NOVAS ROTAS)
   // ==========================================================
 
+  // ==========================================================
+  // REMOÇÃO SIMPLIFICADA (CÓDIGO SUBSTITUÍDO)
+  // ==========================================================
   @UseGuards(AdminAuthGuard)
   @Delete('admin/mesas/:codseq/itens/:codseqItem')
   async removerItemMesa(
     @Param('codseq', ParseIntPipe) codseq: number,
     @Param('codseqItem', ParseIntPipe) codseqItem: number,
-    @Req() req: Request, // <-- MUDANÇA AQUI: Parâmetro obrigatório veio para antes
-    @Body('motivo') motivo?: string, // <-- MUDANÇA AQUI: Parâmetro opcional veio para depois
+    @Body('motivo') motivo?: string, // OPCIONAL
   ) {
-    const user = req.user as AuthenticatedUser;
-
-    // Bloco de validação removido na etapa anterior (correto)
-
-    return this.restauranteService.removerItem(
-      codseq,
-      codseqItem,
-      motivo || 'Sem motivo informado', // Lógica de fallback mantida
-      user.id,
-    );
+    return this.restauranteService.removerItem(codseq, codseqItem, motivo);
   }
 
   @UseGuards(AdminAuthGuard)
@@ -220,6 +213,26 @@ export class RestauranteController {
   // ==========================================================
   // DIVISÃO DE CONTA (NOVAS ROTAS)
   // ==========================================================
+
+  // ==========================================================
+  // DIVISÃO SIMPLIFICADA (CÓDIGO ADICIONADO)
+  // ==========================================================
+  @UseGuards(AdminAuthGuard)
+  @Post('admin/mesas/:codseq/calcular-divisao')
+  async calcularDivisao(
+    @Param('codseq', ParseIntPipe) codseq: number,
+    @Body()
+    body: {
+      num_pessoas: number;
+      itens_por_pessoa: Array<{ codseq_item: number; pessoa: number }>;
+    },
+  ) {
+    return this.restauranteService.calcularDivisaoSimplificada(
+      codseq,
+      body.num_pessoas,
+      body.itens_por_pessoa,
+    );
+  }
 
   @UseGuards(AdminAuthGuard)
   @Get('admin/mesas/:codseq/divisao-status')

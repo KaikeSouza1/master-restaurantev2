@@ -473,7 +473,7 @@ let RestauranteService = class RestauranteService {
             return mesaFinalizada;
         });
     }
-    async removerItem(codseq, codseqItem, motivo, userId) {
+    async removerItem(codseq, codseqItem, motivo) {
         return this.prisma.$transaction(async (tx) => {
             const pedido = await tx.quiosque.findUnique({
                 where: { codseq },
@@ -486,26 +486,28 @@ let RestauranteService = class RestauranteService {
                 throw new common_1.ConflictException('Não é possível remover itens de pedidos finalizados');
             }
             if (pedido.obs === 'PAGAMENTO') {
-                throw new common_1.ConflictException('Não é possível remover itens de pedidos em pagamento. Reabra o pedido primeiro.');
+                throw new common_1.ConflictException('Mesa em pagamento. Reabra para editar.');
             }
             const item = await tx.quitens.findUnique({
                 where: { codseq: codseqItem },
             });
             if (!item || item.codseq_qu !== codseq) {
-                throw new common_1.NotFoundException('Item não encontrado neste pedido');
+                throw new common_1.NotFoundException('Item não encontrado');
             }
             await tx.quitens.delete({
                 where: { codseq: codseqItem },
             });
             const pedidoAtualizado = await this.calcularTotais(codseq, tx);
-            const dataHora = new Date().toLocaleString('pt-BR');
-            const logRemocao = `\n[${dataHora}] REMOVIDO (User: ${userId}): ${item.qtd}x ${item.descricao} - Motivo: ${motivo}`;
-            await tx.quiosque.update({
-                where: { codseq },
-                data: {
-                    obs: (pedido.obs || '') + logRemocao,
-                },
-            });
+            if (motivo) {
+                const dataHora = new Date().toLocaleString('pt-BR');
+                const logRemocao = `\n[${dataHora}] REMOVIDO: ${item.qtd}x ${item.descricao} - ${motivo}`;
+                await tx.quiosque.update({
+                    where: { codseq },
+                    data: {
+                        obs: (pedido.obs || '') + logRemocao,
+                    },
+                });
+            }
             return pedidoAtualizado;
         });
     }
@@ -551,6 +553,39 @@ let RestauranteService = class RestauranteService {
             }
             return pedidoAtualizado;
         });
+    }
+    async calcularDivisaoSimplificada(codseq, numPessoas, itensPorPessoa) {
+        const pedido = await this.prisma.quiosque.findUnique({
+            where: { codseq },
+            include: { quitens: true },
+        });
+        if (!pedido) {
+            throw new common_1.NotFoundException('Pedido não encontrado');
+        }
+        if (pedido.obs !== 'PAGAMENTO') {
+            throw new common_1.ConflictException('Mesa precisa estar em PAGAMENTO');
+        }
+        const divisao = {};
+        for (let i = 1; i <= numPessoas; i++) {
+            divisao[i] = { itens: [], total: 0 };
+        }
+        for (const itemDiv of itensPorPessoa) {
+            const item = pedido.quitens.find((q) => q.codseq === itemDiv.codseq_item);
+            if (item) {
+                divisao[itemDiv.pessoa].itens.push({
+                    descricao: item.descricao,
+                    qtd: item.qtd,
+                    total: Number(item.total),
+                });
+                divisao[itemDiv.pessoa].total += Number(item.total);
+            }
+        }
+        return {
+            codseq,
+            total_conta: Number(pedido.total),
+            num_pessoas: numPessoas,
+            divisao,
+        };
     }
     async registrarPagamentoParcial(codseq, pagamentos) {
         return this.prisma.$transaction(async (tx) => {

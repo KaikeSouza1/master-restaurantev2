@@ -1,20 +1,13 @@
 // packages/frontend/src/components/ModalDivisaoConta.tsx
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import ReactModal from 'react-modal';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { X, DollarSign, CreditCard, Smartphone, Banknote, Plus, Check, Loader2 } from 'lucide-react';
+import { X, Users, Calculator, Check } from 'lucide-react';
 import type { Mesa } from '../types';
 import { formatCurrency } from '../utils/helpers';
-import { obterStatusDivisao, registrarPagamentoParcial, finalizarPedidoDividido } from '../services/api';
-
-const FORMAS_PAGAMENTO = [
-  { id: 1, nome: 'Dinheiro', icon: Banknote, cor: 'from-green-500 to-green-600' },
-  { id: 2, nome: 'PIX', icon: Smartphone, cor: 'from-cyan-500 to-cyan-600' },
-  { id: 3, nome: 'Débito', icon: CreditCard, cor: 'from-blue-500 to-blue-600' },
-  { id: 4, nome: 'Crédito', icon: CreditCard, cor: 'from-purple-500 to-purple-600' },
-];
+import { calcularDivisao, finalizarPedidoNfce } from '../services/api';
 
 interface ModalProps {
   mesa: Mesa;
@@ -22,120 +15,85 @@ interface ModalProps {
   onFinalizado: () => void;
 }
 
-interface Pagamento {
-  pessoa_numero: number;
-  nome_pessoa?: string;
-  valor_pago: number;
-  forma_pagamento: number;
-  data_hora: string;
-}
-
 export function ModalDivisaoConta({ mesa, onClose, onFinalizado }: ModalProps) {
-  const [loading, setLoading] = useState(true);
-  const [totalConta, setTotalConta] = useState(0);
-  const [totalPago, setTotalPago] = useState(0);
-  const [totalRestante, setTotalRestante] = useState(0);
-  const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
-  const [podeFinalizar, setPodeFinalizar] = useState(false);
+  const [numPessoas, setNumPessoas] = useState(2);
+  const [itensPorPessoa, setItensPorPessoa] = useState<Record<number, number>>({});
+  const [resultado, setResultado] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Estado do formulário de novo pagamento
-  const [nomePessoa, setNomePessoa] = useState('');
-  const [valorPagar, setValorPagar] = useState('');
-  const [formaSelecionada, setFormaSelecionada] = useState<number | null>(null);
-  const [enviando, setEnviando] = useState(false);
-  const [finalizando, setFinalizando] = useState(false);
+  // Atribuir item para pessoa
+  const handleAtribuirItem = (codseqItem: number, pessoa: number) => {
+    setItensPorPessoa(prev => ({
+      ...prev,
+      [codseqItem]: pessoa
+    }));
+    setResultado(null); // Limpa resultado anterior
+  };
 
-  const carregarStatus = async () => {
+  // Calcular divisão
+  const handleCalcular = async () => {
+    // Verificar se todos itens foram atribuídos
+    const todosAtribuidos = mesa.quitens.every(item => 
+      item.codseq && itensPorPessoa[item.codseq]
+    );
+
+    if (!todosAtribuidos) {
+      toast.error('Atribua todos os itens para as pessoas!');
+      return;
+    }
+
     setLoading(true);
+
     try {
-      const status = await obterStatusDivisao(mesa.codseq);
-      setTotalConta(status.total_conta);
-      setTotalPago(status.total_pago);
-      setTotalRestante(status.total_restante);
-      setPagamentos(status.pagamentos || []);
-      setPodeFinalizar(status.pode_finalizar);
+      const itensArray = Object.entries(itensPorPessoa).map(([codseq, pessoa]) => ({
+        codseq_item: Number(codseq),
+        pessoa
+      }));
+
+      const res = await calcularDivisao(mesa.codseq, numPessoas, itensArray);
+      setResultado(res);
+      toast.success('Divisão calculada!');
     } catch (err: any) {
-      console.error('Erro ao carregar status:', err);
-      toast.error('Erro ao carregar divisão de conta');
+      toast.error(`Erro: ${err.response?.data?.message || err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    carregarStatus();
-  }, [mesa.codseq]);
-
-  const handleRegistrarPagamento = async () => {
-    const valor = parseFloat(valorPagar.replace(',', '.'));
-
-    if (!valor || valor <= 0) {
-      toast.error('Digite um valor válido');
-      return;
-    }
-
-    if (valor > totalRestante) {
-      toast.error(`Valor não pode ser maior que o restante (${formatCurrency(totalRestante)})`);
-      return;
-    }
-
-    if (!formaSelecionada) {
-      toast.error('Selecione uma forma de pagamento');
-      return;
-    }
-
-    setEnviando(true);
-
-    try {
-      const proximaPessoa = pagamentos.length + 1;
-
-      await registrarPagamentoParcial(mesa.codseq, {
-        pessoa_numero: proximaPessoa,
-        nome_pessoa: nomePessoa || undefined,
-        valor_pago: valor,
-        forma_pagamento: formaSelecionada,
-      });
-
-      toast.success(`Pagamento de ${formatCurrency(valor)} registrado!`);
-
-      // Limpar formulário
-      setNomePessoa('');
-      setValorPagar('');
-      setFormaSelecionada(null);
-
-      // Recarregar status
-      await carregarStatus();
-
-    } catch (err: any) {
-      console.error('Erro ao registrar pagamento:', err);
-      toast.error(`Erro: ${err.response?.data?.message || err.message}`);
-    } finally {
-      setEnviando(false);
-    }
-  };
-
+  // Finalizar no NFCe
   const handleFinalizar = async () => {
-    if (!podeFinalizar) {
-      toast.error('Ainda falta pagar parte da conta!');
+    if (!resultado) {
+      toast.error('Calcule a divisão primeiro!');
       return;
     }
 
-    setFinalizando(true);
+    setLoading(true);
 
     try {
-      await finalizarPedidoDividido(mesa.codseq);
-      toast.success('Conta dividida e finalizada! Pode emitir no NFCe.');
+      await finalizarPedidoNfce(mesa.codseq);
+      toast.success('Finalizado! Pode emitir no NFCe.');
       onFinalizado();
       onClose();
     } catch (err: any) {
-      console.error('Erro ao finalizar:', err);
       toast.error(`Erro: ${err.response?.data?.message || err.message}`);
     } finally {
-      setFinalizando(false);
+      setLoading(false);
     }
   };
 
-  const formaPagtoNome = (id: number) => FORMAS_PAGAMENTO.find(f => f.id === id)?.nome || 'Desconhecido';
+  // Cores por pessoa
+  const cores = [
+    'bg-blue-500',
+    'bg-green-500',
+    'bg-red-500',
+    'bg-yellow-500',
+    'bg-purple-500',
+    'bg-pink-500',
+    'bg-indigo-500',
+    'bg-orange-500',
+    'bg-teal-500',
+    'bg-cyan-500'
+  ];
 
   return (
     <ReactModal
@@ -148,15 +106,14 @@ export function ModalDivisaoConta({ mesa, onClose, onFinalizado }: ModalProps) {
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
         className="h-full flex flex-col max-h-[90vh]"
       >
-        {/* Header */}
-        <div className="flex-shrink-0 bg-gradient-to-r from-purple-600 to-indigo-700 text-white p-6 flex justify-between items-center">
+        {/* Header AZUL */}
+        <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 flex justify-between items-center">
           <div>
-            <h2 className="text-3xl font-black">Dividir Conta</h2>
+            <h2 className="text-3xl font-black">💰 Dividir Conta</h2>
             <p className="text-white/80 font-semibold">
-              Mesa {mesa.num_quiosque} - Pedido #{mesa.codseq}
+              Mesa {mesa.num_quiosque} - Total: {formatCurrency(mesa.total)}
             </p>
           </div>
           <motion.button
@@ -169,182 +126,133 @@ export function ModalDivisaoConta({ mesa, onClose, onFinalizado }: ModalProps) {
           </motion.button>
         </div>
 
-        {loading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 size={48} className="animate-spin text-purple-600" />
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+          {/* Número de Pessoas */}
+          <div className="bg-blue-50 p-5 rounded-xl border-2 border-blue-200">
+            <label className="flex items-center space-x-2 text-lg font-bold text-blue-900 mb-3">
+              <Users size={24} />
+              <span>Quantas pessoas vão dividir?</span>
+            </label>
+            <input
+              type="number"
+              min="2"
+              max="10"
+              value={numPessoas}
+              onChange={(e) => {
+                setNumPessoas(Number(e.target.value));
+                setItensPorPessoa({});
+                setResultado(null);
+              }}
+              className="w-full px-4 py-3 text-3xl font-black text-center border-2 border-blue-300 rounded-lg focus:border-blue-600 focus:outline-none"
+            />
           </div>
-        ) : (
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
-            {/* Resumo Financeiro */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-blue-50 p-4 rounded-xl border-2 border-blue-200">
-                <p className="text-sm font-bold text-blue-700">Total da Conta</p>
-                <p className="text-3xl font-black text-blue-900">{formatCurrency(totalConta)}</p>
-              </div>
-              <div className="bg-green-50 p-4 rounded-xl border-2 border-green-200">
-                <p className="text-sm font-bold text-green-700">Total Pago</p>
-                <p className="text-3xl font-black text-green-900">{formatCurrency(totalPago)}</p>
-              </div>
-              <div className={`p-4 rounded-xl border-2 ${
-                totalRestante <= 0.01 
-                  ? 'bg-emerald-50 border-emerald-200' 
-                  : 'bg-red-50 border-red-200'
-              }`}>
-                <p className={`text-sm font-bold ${
-                  totalRestante <= 0.01 ? 'text-emerald-700' : 'text-red-700'
-                }`}>
-                  {totalRestante <= 0.01 ? '✅ Quitado!' : 'Restante'}
-                </p>
-                <p className={`text-3xl font-black ${
-                  totalRestante <= 0.01 ? 'text-emerald-900' : 'text-red-900'
-                }`}>
-                  {formatCurrency(totalRestante)}
-                </p>
-              </div>
-            </div>
-
-            {/* Lista de Pagamentos Registrados */}
-            <div className="bg-zinc-50 p-5 rounded-xl border border-zinc-200">
-              <h3 className="text-lg font-bold text-zinc-800 mb-4">Pagamentos Registrados</h3>
-              {pagamentos.length === 0 ? (
-                <p className="text-zinc-500 text-center py-8">Nenhum pagamento registrado ainda</p>
-              ) : (
-                <div className="space-y-3">
-                  {pagamentos.map((pag, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="flex justify-between items-center bg-white p-4 rounded-lg border border-zinc-200"
-                    >
+          {/* Lista de Itens */}
+          <div className="bg-zinc-50 p-5 rounded-xl border border-zinc-200">
+            <h3 className="text-lg font-bold text-zinc-800 mb-4">
+              👇 Clique em cada item para escolher quem vai pagar
+            </h3>
+            <div className="space-y-3">
+              {mesa.quitens.map((item, index) => {
+                const pessoaSelecionada = item.codseq ? itensPorPessoa[item.codseq] : null;
+                
+                return (
+                  <div key={item.codseq || index} className="bg-white p-4 rounded-lg border-2 border-zinc-200">
+                    <div className="flex justify-between items-center mb-3">
                       <div>
                         <p className="font-bold text-zinc-800">
-                          Pessoa {pag.pessoa_numero}
-                          {pag.nome_pessoa && <span className="text-zinc-500 font-normal"> ({pag.nome_pessoa})</span>}
+                          {item.qtd}x {item.descricao}
                         </p>
-                        <p className="text-sm text-zinc-600">
-                          {formaPagtoNome(pag.forma_pagamento)} • {new Date(pag.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
+                        {item.obs && (
+                          <p className="text-xs text-zinc-500 italic">{item.obs}</p>
+                        )}
                       </div>
-                      <p className="text-2xl font-black text-green-700">{formatCurrency(pag.valor_pago)}</p>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </div>
+                      <p className="text-xl font-black text-blue-700">
+                        {formatCurrency(item.total)}
+                      </p>
+                    </div>
 
-            {/* Formulário de Novo Pagamento */}
-            {totalRestante > 0.01 && (
-              <div className="bg-purple-50 p-6 rounded-xl border-2 border-purple-200">
-                <h3 className="text-xl font-bold text-purple-900 mb-4 flex items-center space-x-2">
-                  <Plus size={24} />
-                  <span>Registrar Novo Pagamento</span>
-                </h3>
-
-                <div className="space-y-4">
-                  {/* Nome (opcional) */}
-                  <div>
-                    <label className="block text-sm font-semibold text-zinc-700 mb-2">
-                      Nome da Pessoa (opcional)
-                    </label>
-                    <input
-                      type="text"
-                      value={nomePessoa}
-                      onChange={(e) => setNomePessoa(e.target.value)}
-                      placeholder="Ex: João, Maria..."
-                      className="w-full px-4 py-3 border-2 border-zinc-300 rounded-lg focus:border-purple-500 focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Valor */}
-                  <div>
-                    <label className="block text-sm font-semibold text-zinc-700 mb-2">
-                      Valor Pago *
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={valorPagar}
-                      onChange={(e) => setValorPagar(e.target.value)}
-                      placeholder="0,00"
-                      className="w-full px-4 py-3 border-2 border-zinc-300 rounded-lg focus:border-purple-500 focus:outline-none text-2xl font-bold"
-                    />
-                    <button
-                      onClick={() => setValorPagar(totalRestante.toFixed(2))}
-                      className="mt-2 text-sm text-purple-600 hover:text-purple-800 font-semibold"
-                    >
-                      💡 Preencher com valor restante ({formatCurrency(totalRestante)})
-                    </button>
-                  </div>
-
-                  {/* Forma de Pagamento */}
-                  <div>
-                    <label className="block text-sm font-semibold text-zinc-700 mb-2">
-                      Forma de Pagamento *
-                    </label>
-                    <div className="grid grid-cols-4 gap-3">
-                      {FORMAS_PAGAMENTO.map((forma) => (
+                    {/* Botões de Pessoa */}
+                    <div className="flex flex-wrap gap-2">
+                      {Array.from({ length: numPessoas }, (_, i) => i + 1).map(pessoa => (
                         <motion.button
-                          key={forma.id}
-                          onClick={() => setFormaSelecionada(forma.id)}
+                          key={pessoa}
+                          onClick={() => item.codseq && handleAtribuirItem(item.codseq, pessoa)}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          className={`p-4 rounded-xl transition-all border-4 flex flex-col items-center space-y-2 ${
-                            formaSelecionada === forma.id
-                              ? `bg-gradient-to-r ${forma.cor} text-white border-white shadow-xl`
-                              : 'bg-white text-zinc-700 border-zinc-200 hover:border-zinc-300'
+                          className={`px-4 py-2 rounded-lg font-bold transition-all ${
+                            pessoaSelecionada === pessoa
+                              ? `${cores[pessoa - 1]} text-white shadow-lg ring-4 ring-offset-2`
+                              : 'bg-zinc-200 text-zinc-600 hover:bg-zinc-300'
                           }`}
                         >
-                          <forma.icon size={24} />
-                          <span className="text-sm font-bold">{forma.nome}</span>
+                          Pessoa {pessoa}
                         </motion.button>
                       ))}
                     </div>
                   </div>
+                );
+              })}
+            </div>
+          </div>
 
-                  {/* Botão de Registrar */}
-                  <motion.button
-                    onClick={handleRegistrarPagamento}
-                    disabled={enviando}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full bg-gradient-to-r from-purple-600 to-indigo-700 text-white py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
+          {/* Resultado da Divisão */}
+          {resultado && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-green-50 p-5 rounded-xl border-2 border-green-300"
+            >
+              <h3 className="text-xl font-bold text-green-900 mb-4 flex items-center space-x-2">
+                <Check size={24} />
+                <span>Resumo da Divisão</span>
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {Object.entries(resultado.divisao).map(([pessoa, dados]: [string, any]) => (
+                  <div
+                    key={pessoa}
+                    className={`${cores[Number(pessoa) - 1]} text-white p-4 rounded-xl shadow-lg`}
                   >
-                    {enviando ? (
-                      <Loader2 size={24} className="animate-spin" />
-                    ) : (
-                      <Plus size={24} />
-                    )}
-                    <span>{enviando ? 'Registrando...' : 'Registrar Pagamento'}</span>
-                  </motion.button>
-                </div>
+                    <p className="font-bold text-sm">Pessoa {pessoa}</p>
+                    <p className="text-3xl font-black">{formatCurrency(dados.total)}</p>
+                    <p className="text-xs mt-1 opacity-80">{dados.itens.length} itens</p>
+                  </div>
+                ))}
               </div>
-            )}
+            </motion.div>
+          )}
 
-            {/* Botão de Finalizar (quando tudo pago) */}
-            {podeFinalizar && (
+          {/* Botões de Ação */}
+          <div className="flex gap-3">
+            <motion.button
+              onClick={handleCalcular}
+              disabled={loading || Object.keys(itensPorPessoa).length !== mesa.quitens.length}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex-1 bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+            >
+              <Calculator size={24} />
+              <span>Calcular Divisão</span>
+            </motion.button>
+
+            {resultado && (
               <motion.button
                 onClick={handleFinalizar}
-                disabled={finalizando}
+                disabled={loading}
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="w-full bg-gradient-to-r from-green-600 to-emerald-700 text-white py-6 rounded-xl font-black text-2xl hover:shadow-2xl transition-all disabled:opacity-50 flex items-center justify-center space-x-3"
+                className="flex-1 bg-green-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center space-x-2"
               >
-                {finalizando ? (
-                  <Loader2 size={32} className="animate-spin" />
-                ) : (
-                  <Check size={32} />
-                )}
-                <span>{finalizando ? 'Finalizando...' : 'Finalizar Conta (NFCe)'}</span>
+                <Check size={24} />
+                <span>Finalizar (NFCe)</span>
               </motion.button>
             )}
-
           </div>
-        )}
+
+        </div>
       </motion.div>
     </ReactModal>
   );

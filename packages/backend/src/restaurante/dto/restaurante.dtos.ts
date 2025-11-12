@@ -1,3 +1,4 @@
+// packages/backend/src/restaurante/dto/restaurante.dtos.ts
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -8,6 +9,7 @@ import {
   IsString,
   Min,
   ValidateNested,
+  Max,
 } from 'class-validator';
 
 // --- DTO para Itens ---
@@ -43,7 +45,7 @@ export class CreatePedidoDto {
   @IsString()
   @IsOptional()
   fone_esp?: string;
-
+  
   @IsInt()
   @IsOptional()
   cod_endereco?: number;
@@ -108,73 +110,40 @@ export class FinalizarCaixaDto {
 }
 
 // ==========================================================
-// DIVISÃO DE CONTA (CONTROLE WEB)
+// DIVISÃO DE CONTA SIMPLIFICADA
 // ==========================================================
 
-export class PagamentoParcialDto {
+export class ItemDivisaoSimplificadaDto {
+  @IsInt()
+  codseq_item: number; // ID do item
+
   @IsInt()
   @Min(1)
-  pessoa_numero: number; // Pessoa 1, 2, 3...
-
-  @IsString()
-  @IsOptional()
-  nome_pessoa?: string; // Ex: "João", "Maria" (opcional)
-
-  @IsNumber()
-  @Min(0.01)
-  valor_pago: number; // Quanto essa pessoa pagou
-
-  @IsInt()
-  forma_pagamento: number; // ID da forma de pagamento (1=Dinheiro, 2=PIX...)
+  pessoa: number; // Pessoa 1, 2, 3...
 }
 
-export class RegistrarPagamentoParcialDto {
+export class DividirContaSimplificadaDto {
+  @IsInt()
+  @Min(2)
+  @Max(10)
+  num_pessoas: number; // Máximo 10 pessoas
+
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => PagamentoParcialDto)
-  pagamentos: PagamentoParcialDto[];
-}
-
-// Response do controle de divisão
-export interface DivisaoContaStatus {
-  codseq: number;
-  total_conta: number;
-  total_pago: number;
-  total_restante: number;
-  pagamentos: Array<{
-    pessoa_numero: number;
-    nome_pessoa?: string;
-    valor_pago: number;
-    forma_pagamento: number;
-    data_hora: string;
-  }>;
-  pode_finalizar: boolean; // true quando total_restante = 0
+  @Type(() => ItemDivisaoSimplificadaDto)
+  itens_por_pessoa: ItemDivisaoSimplificadaDto[]; // Quais itens cada pessoa paga
 }
 
 // ==========================================================
-// REMOÇÃO DE ITENS
+// REMOÇÃO DE ITENS (SEM MOTIVO OBRIGATÓRIO)
 // ==========================================================
 
 export class RemoverItemDto {
   @IsInt()
   @IsNotEmpty()
-  codseq_item: number; // ID do item em quitens
-
-  @IsString()
-  @IsNotEmpty()
-  motivo: string; // Ex: "Cliente desistiu", "Erro no pedido"
-}
-
-export class EditarQuantidadeItemDto {
-  @IsInt()
-  @IsNotEmpty()
   codseq_item: number;
-
-  @IsNumber()
-  @Min(0.01)
-  nova_quantidade: number;
 
   @IsString()
   @IsOptional()
-  motivo?: string;
+  motivo?: string; // Agora é OPCIONAL
 }

@@ -75,15 +75,17 @@ let RestauranteController = class RestauranteController {
         const user = req.user;
         return this.restauranteService.finalizarMesaCaixa(codseq, dto, user);
     }
-    async removerItemMesa(codseq, codseqItem, req, motivo) {
-        const user = req.user;
-        return this.restauranteService.removerItem(codseq, codseqItem, motivo || 'Sem motivo informado', user.id);
+    async removerItemMesa(codseq, codseqItem, motivo) {
+        return this.restauranteService.removerItem(codseq, codseqItem, motivo);
     }
     async editarQuantidadeItem(codseq, codseqItem, body) {
         if (!body.nova_quantidade || body.nova_quantidade <= 0) {
             throw new common_1.ConflictException('Quantidade deve ser maior que zero');
         }
         return this.restauranteService.editarQuantidadeItem(codseq, codseqItem, body.nova_quantidade, body.motivo);
+    }
+    async calcularDivisao(codseq, body) {
+        return this.restauranteService.calcularDivisaoSimplificada(codseq, body.num_pessoas, body.itens_por_pessoa);
     }
     async obterStatusDivisao(codseq) {
         return this.restauranteService.obterStatusDivisao(codseq);
@@ -233,10 +235,9 @@ __decorate([
     (0, common_1.Delete)('admin/mesas/:codseq/itens/:codseqItem'),
     __param(0, (0, common_1.Param)('codseq', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Param)('codseqItem', common_1.ParseIntPipe)),
-    __param(2, (0, common_1.Req)()),
-    __param(3, (0, common_1.Body)('motivo')),
+    __param(2, (0, common_1.Body)('motivo')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Number, Object, String]),
+    __metadata("design:paramtypes", [Number, Number, String]),
     __metadata("design:returntype", Promise)
 ], RestauranteController.prototype, "removerItemMesa", null);
 __decorate([
@@ -249,6 +250,15 @@ __decorate([
     __metadata("design:paramtypes", [Number, Number, Object]),
     __metadata("design:returntype", Promise)
 ], RestauranteController.prototype, "editarQuantidadeItem", null);
+__decorate([
+    (0, common_1.UseGuards)(auth_guard_1.AdminAuthGuard),
+    (0, common_1.Post)('admin/mesas/:codseq/calcular-divisao'),
+    __param(0, (0, common_1.Param)('codseq', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:returntype", Promise)
+], RestauranteController.prototype, "calcularDivisao", null);
 __decorate([
     (0, common_1.UseGuards)(auth_guard_1.AdminAuthGuard),
     (0, common_1.Get)('admin/mesas/:codseq/divisao-status'),

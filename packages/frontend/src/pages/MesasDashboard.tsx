@@ -17,6 +17,8 @@ import { ModalTransferirMesa } from '../components/ModalTransferirMesa';
 import { ModalConfirmacao } from '../components/ModalConfirmacao';
 import { ModalJuntarMesa } from '../components/ModalJuntarMesa';
 import { ModalFinalizarCaixa } from '../components/ModalFinalizarCaixa';
+import { ModalDivisaoConta } from '../components/ModalDivisaoConta';
+import { ModalEditarItens } from '../components/ModalEditarItens';
 import {
   Loader2,
   AlertTriangle,
@@ -70,6 +72,8 @@ export function MesasDashboard() {
   const [modalAdicionar, setModalAdicionar] = useState(false);
   const [modalJuntar, setModalJuntar] = useState(false);
   const [modalFinalizarCaixa, setModalFinalizarCaixa] = useState(false);
+  const [modalDivisao, setModalDivisao] = useState(false); // NOVO
+  const [modalEditar, setModalEditar] = useState(false); // NOVO
 
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('TODAS');
   const [buscaMesa, setBuscaMesa] = useState<string>(''); 
@@ -367,6 +371,14 @@ export function MesasDashboard() {
     setModalJuntar(true);
   };
 
+  const handleAbrirDivisao = () => {
+    setModalDivisao(true);
+  };
+
+  const handleAbrirEditar = () => {
+    setModalEditar(true);
+  };
+
   // Lógica de Geração das Mesas
   const mesasMapeadas = new Map(
     mesasAtivas.map((m) => [m.num_quiosque, m]),
@@ -604,8 +616,10 @@ export function MesasDashboard() {
             onJuntar={handleAbrirJuntar} 
             onFecharConta={handleSolicitarFechamento}
             onFinalizarMesa={handleLiberarMesa} 
-            onFinalizarCaixa={handleFinalizarCaixa} 
+            onFinalizarCaixa={handleFinalizarCaixa}
             onFecharMesaVazia={handleFecharMesaVazia}
+            onDividirConta={handleAbrirDivisao}
+            onEditarItens={handleAbrirEditar}
           />
         )}
 
