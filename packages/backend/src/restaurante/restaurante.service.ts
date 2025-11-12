@@ -127,7 +127,8 @@ export class RestauranteService {
             vda_finalizada: 'N',
             obs: 'NOVO',
 
-            // CORREÇÃO: Revertido para campo escalar (codcli) e re-adicionado o type cast.
+            // CORREÇÃO FINAL: Usamos o campo escalar codcli e o cast para 'any'
+            // para resolver problemas de tipos não encontrados no ambiente Vercel (TS2694/TS2353).
             codcli: user.id, // Campo escalar
 
             nome_cli_esp: user.nome,
@@ -137,7 +138,7 @@ export class RestauranteService {
             sub_total_geral: subTotal,
             total: totalGeral,
             ean: String(proximoCodseqQuiosque),
-          } as Prisma.quiosqueUncheckedCreateInput, // Re-adicionado o cast para forçar o Unchecked Input
+          } as any, // Cast forçado para 'any' para evitar erros de tipo na compilação do Vercel
         });
 
         const itensParaSalvar = dto.itens.map((item) => {
@@ -155,7 +156,7 @@ export class RestauranteService {
         });
 
         await tx.quitens.createMany({
-          data: itensParaSalvar as Prisma.quitensCreateManyInput[], // Re-adicionado o cast
+          data: itensParaSalvar as any, // Cast forçado para 'any' para evitar erros de tipo na compilação do Vercel
         });
 
         return novoQuiosque;
@@ -330,7 +331,7 @@ export class RestauranteService {
             sub_total_geral: 0,
             total: 0,
             ean: String(proximoCodseqQuiosque),
-          } as Prisma.quiosqueUncheckedCreateInput, // Re-adicionado o cast
+          } as any, // Cast forçado para 'any' para evitar erros de tipo na compilação do Vercel
         });
         return novaMesa;
       });
@@ -381,7 +382,7 @@ export class RestauranteService {
         });
 
         await tx.quitens.createMany({
-          data: itensParaSalvar as Prisma.quitensCreateManyInput[], // Re-adicionado o cast
+          data: itensParaSalvar as any, // Cast forçado para 'any' para evitar erros de tipo na compilação do Vercel
         });
 
         await this.calcularTotais(codseq, tx);
