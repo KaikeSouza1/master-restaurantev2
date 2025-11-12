@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "packages/backend/src/main.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "packages/backend/dist/**",
+          "packages/backend/node_modules/**",
+          "node_modules/@prisma/**",
+          "node_modules/.prisma/**"
+        ],
+        "helpers": false,
+        "external": ["@nestjs/microservices", "@nestjs/websockets"]
+      }
+    },
+    {
+      "src": "packages/frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "packages/frontend/dist"
+      }
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/packages/backend/src/main.ts"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/packages/frontend/dist/index.html"
+    }
+  ]
+}

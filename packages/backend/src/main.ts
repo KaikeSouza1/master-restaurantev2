@@ -1,28 +1,32 @@
+// packages/backend/src/main.ts
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
-import { DecimalToNumberInterceptor } from './utils/decimal-to-number.interceptor'; // Importação
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
-  // Habilita o CORS para o frontend (http://localhost:5173)
+  
+  // Habilita o CORS (importante para Vercel)
   app.enableCors({
-    origin: '*', // Em produção, mude para o seu domínio: 'http://localhost:5173'
+    origin: '*', // Você pode restringir isso para o seu domínio Vercel depois
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: 'Content-Type, Accept, Authorization',
   });
 
-  // Habilita validação global de DTOs
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-  }));
+  // Adiciona o prefixo global que seu frontend espera
+  app.setGlobalPrefix('api');
   
-  // APLICAÇÃO DO INTERCEPTOR GLOBAL
-  app.useGlobalInterceptors(new DecimalToNumberInterceptor());
-
-  await app.listen(3000);
-  console.log(`Backend rodando em: http://localhost:3000`);
+  // Inicializa o app, mas não "escuta"
+  await app.init();
+  return app;
 }
-bootstrap();
+
+// Exporta o manipulador serverless
+let cachedApp;
+export default async (req, res) => {
+  if (!cachedApp) {
+    cachedApp = await bootstrap();
+  }
+  const httpAdapter = cachedApp.getHttpAdapter();
+  httpAdapter.getInstance()(req, res);
+};
