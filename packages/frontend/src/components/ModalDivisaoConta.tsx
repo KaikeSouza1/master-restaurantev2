@@ -121,7 +121,8 @@ export function ModalDivisaoConta({
     }
 
     setDivisibleItens(prevItens => {
-      const newItensList: DivisibleItem[] = [];
+      // CORREÇÃO VERCEL (TS6133): Variável 'newItensList' removida pois não estava sendo usada.
+      // const newItensList: DivisibleItem[] = []; 
       const itemIndex = prevItens.findIndex(i => i.uniqueKey === splittingKey);
       if (itemIndex === -1) return prevItens;
 

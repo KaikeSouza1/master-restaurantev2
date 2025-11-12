@@ -19,7 +19,8 @@ interface MesaCardProps {
 }
 
 export function MesaCardDashboard({ mesa, onClick }: MesaCardProps) {
-  const { status, bgColor, textColor, ringColor } = getMesaStatus(mesa);
+  // CORREÇÃO VERCEL (TS6133): Removido 'bgColor' e 'textColor' pois não estavam sendo usados.
+  const { status, ringColor } = getMesaStatus(mesa);
   const isLivre = status === 'LIVRE';
 
   const cardVariants = {

@@ -4,7 +4,8 @@ import { useState } from 'react';
 import ReactModal from 'react-modal';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { X, Loader2, DollarSign, CreditCard, Smartphone, Banknote, Printer, CheckCircle, ExternalLink } from 'lucide-react';
+// CORREÇÃO VERCEL (TS6133): Removido 'ExternalLink' pois não estava sendo usado.
+import { X, Loader2, DollarSign, CreditCard, Smartphone, Banknote, Printer, CheckCircle } from 'lucide-react';
 import { finalizarMesaCaixa } from '../services/api';
 import type { Mesa, EmpresaInfo } from '../types';
 import { formatCurrency } from '../utils/helpers';
