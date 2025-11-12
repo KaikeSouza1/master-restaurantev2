@@ -19,7 +19,7 @@
       "src": "packages/frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "packages/frontend/dist"
+        "distDir": "dist" 
       }
     }
   ],
