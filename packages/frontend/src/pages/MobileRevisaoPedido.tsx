@@ -1,4 +1,4 @@
-// packages/frontend/src/pages/MobileRevisaoPedido.tsx
+// kaikesouza1/master-restaurantev2/master-restaurantev2-3f0cf43254fbc3ce4fc7d455ba799df98002a2bb/packages/frontend/src/pages/MobileRevisaoPedido.tsx
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -6,7 +6,8 @@ import toast from 'react-hot-toast';
 import { getMesasStatus, removerItemMesa } from '../services/api';
 import type { Mesa, ItemDoPedido } from '../types';
 import { formatCurrency } from '../utils/helpers';
-import { Loader2, AlertTriangle, Trash2, Package } from 'lucide-react';
+// CORREÇÃO VERCEL (TS6133): Removido 'AlertTriangle' pois não estava sendo usado.
+import { Loader2, Trash2, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MobileHeader } from '../components/MobileHeader'; // Importa o header
 

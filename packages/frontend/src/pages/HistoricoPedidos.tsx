@@ -1,9 +1,10 @@
-// packages/frontend/src/pages/HistoricoPedidos.tsx
+// kaikesouza1/master-restaurantev2/master-restaurantev2-3f0cf43254fbc3ce4fc7d455ba799df98002a2bb/packages/frontend/src/pages/HistoricoPedidos.tsx
 
 import { useState, useEffect } from 'react';
 import { getFinalizadosOrders } from '../services/api';
 import type { Mesa } from '../types';
-import { formatCurrency, formatDateTime, formatTimeFromISO, formatDateCompact } from '../utils/helpers';
+// CORREÇÃO VERCEL (TS6133): Removido 'formatDateTime' e 'formatTimeFromISO' pois não estavam sendo usados.
+import { formatCurrency, formatDateCompact } from '../utils/helpers';
 import { 
   Loader2, 
   Search, 
@@ -13,7 +14,8 @@ import {
   TrendingUp,
   FileText,
   ChevronDown,
-  ChevronUp,
+  // CORREÇÃO VERCEL (TS6133): Removido 'ChevronUp' pois não estava sendo usado.
+  // ChevronUp,
   Filter,
   Download,
   LayoutGrid 
@@ -79,7 +81,8 @@ export function HistoricoPedidos() {
   // Estatísticas
   const totalFaturamento = pedidosFiltrados.reduce((acc, p) => acc + Number(p.total), 0);
   const ticketMedio = pedidosFiltrados.length > 0 ? totalFaturamento / pedidosFiltrados.length : 0;
-  const totalItens = pedidosFiltrados.reduce((acc, p) => acc + p.quitens.length, 0);
+  // CORREÇÃO VERCEL (TS6133): Variável 'totalItens' comentada pois não estava sendo usada.
+  // const totalItens = pedidosFiltrados.reduce((acc, p) => acc + p.quitens.length, 0);
   const pedidosMesa = pedidosFiltrados.filter(p => p.tipo === 'M').length;
   const pedidosDelivery = pedidosFiltrados.filter(p => p.tipo === 'D').length;
 

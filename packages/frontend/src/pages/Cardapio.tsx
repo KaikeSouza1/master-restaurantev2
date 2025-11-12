@@ -1,4 +1,4 @@
-// master-restaurante-v2/packages/frontend/src/pages/Cardapio.tsx
+// kaikesouza1/master-restaurantev2/master-restaurantev2-3f0cf43254fbc3ce4fc7d455ba799df98002a2bb/packages/frontend/src/pages/Cardapio.tsx
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -17,8 +17,12 @@ type CategoriaAtivaTipo = number | null;
 
 export function CardapioPage() {
   const { user } = useAuth();
-  // Mantemos o estado, mas ele é usado implicitamente no Header, então não removemos.
-  const [empresaInfo, setEmpresaInfo] = useState<EmpresaInfo | null>(null); 
+  
+  // CORREÇÃO VERCEL (TS6133): A variável 'empresaInfo' não estava sendo lida.
+  // Prefixamos com '_' para indicar ao TypeScript que isso é intencional.
+  // O setter 'setEmpresaInfo' continua funcionando normalmente.
+  const [_empresaInfo, setEmpresaInfo] = useState<EmpresaInfo | null>(null); 
+  
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [categoriaAtiva, setCategoriaAtiva] = useState<CategoriaAtivaTipo>(null);

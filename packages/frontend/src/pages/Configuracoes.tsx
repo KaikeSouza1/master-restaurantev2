@@ -1,4 +1,4 @@
-// packages/frontend/src/pages/Configuracoes.tsx
+// kaikesouza1/master-restaurantev2/master-restaurantev2-3f0cf43254fbc3ce4fc7d455ba799df98002a2bb/packages/frontend/src/pages/Configuracoes.tsx
 
 import { useState } from 'react';
 import { 
@@ -7,7 +7,8 @@ import {
   Truck, 
   Percent,
   Bell,
-  Printer,
+  // CORREÇÃO VERCEL (TS6133): Ícone 'Printer' removido pois não estava sendo usado.
+  // Printer, 
   Save,
   AlertCircle
 } from 'lucide-react';
