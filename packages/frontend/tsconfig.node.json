@@ -1,4 +1,4 @@
-// kaikesouza1/master-restaurantev2/master-restaurantev2-3f0cf43254fbc3ce4fc7d4555ba799df98002a2bb/packages/frontend/tsconfig.node.json
+// kaikesouza1/master-restaurantev2/master-restaurantev2-3f0cf43254fbc3ce4fc7d455ba799df98002a2bb/packages/frontend/tsconfig.node.json
 {
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
@@ -11,9 +11,14 @@
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-    // CORREÇÃO VERCEL: Removido 'verbatimModuleSyntax: true' para resolver conflito de tipagem em monorepo
+    // CORREÇÃO: Removido verbatimModuleSyntax (já na etapa anterior)
     "moduleDetection": "force",
     "noEmit": true,
+    
+    // FIX para monorepo/hoisting
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
 
     /* Linting */
     "strict": true,
