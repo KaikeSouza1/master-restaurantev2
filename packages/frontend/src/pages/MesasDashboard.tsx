@@ -72,8 +72,8 @@ export function MesasDashboard() {
   const [modalAdicionar, setModalAdicionar] = useState(false);
   const [modalJuntar, setModalJuntar] = useState(false);
   const [modalFinalizarCaixa, setModalFinalizarCaixa] = useState(false);
-  const [modalDivisao, setModalDivisao] = useState(false); // NOVO
-  const [modalEditar, setModalEditar] = useState(false); // NOVO
+  const [modalDivisao, setModalDivisao] = useState(false);
+  const [modalEditar, setModalEditar] = useState(false);
 
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('TODAS');
   const [buscaMesa, setBuscaMesa] = useState<string>(''); 
@@ -87,6 +87,7 @@ export function MesasDashboard() {
     variant?: 'danger' | 'success' | 'default';
   } | null>(null);
 
+  // Esta é a função que vamos passar
   const askForConfirmation = (
     title: string,
     message: React.ReactNode,
@@ -276,12 +277,9 @@ export function MesasDashboard() {
     );
   };
 
-  // ========== CORREÇÃO CRÍTICA ==========
-  // Só abre o modal de finalizar caixa se a mesa estiver em PAGAMENTO
   const handleFinalizarCaixa = () => {
     if (!mesaSelecionada || !mesaSelecionada.codseq) return;
     
-    // VALIDAÇÃO: Só permite abrir se estiver em PAGAMENTO
     const status = (mesaSelecionada.obs || '').toUpperCase();
     if (status !== 'PAGAMENTO') {
       toast.error('Esta mesa não está em status de PAGAMENTO!');
@@ -689,15 +687,60 @@ export function MesasDashboard() {
             empresaInfo={empresaInfo}
             onClose={() => {
               setModalFinalizarCaixa(false);
-              // NÃO fecha o modal de detalhes aqui
             }}
             onFinalizado={async () => {
-              // Recarrega os dados
               await fetchMesas(true); 
-              // Fecha os modais
               setModalDetalhes(false);
               setMesaSelecionada(null);
             }}
+          />
+        )}
+
+        {/* Modal de Editar Itens */}
+        {modalEditar && mesaSelecionada && (
+          <ModalEditarItens
+            mesa={mesaSelecionada}
+            onClose={() => setModalEditar(false)}
+            onAtualizado={async () => {
+              setModalEditar(false);
+              await fetchMesas(false); 
+              const mesasAtualizadas = await getMesasStatus();
+              if (!mesaSelecionada?.codseq) {
+                console.warn('Callback onAtualizado sem mesa selecionada.');
+                setModalDetalhes(false);
+                setMesaSelecionada(null);
+                return;
+              }
+              const mesaAtualizada = mesasAtualizadas.find(
+                (m) => m.codseq === mesaSelecionada.codseq,
+              );
+              
+              if (mesaAtualizada) {
+                setMesasAtivas(mesasAtualizadas);
+                setMesaSelecionada(mesaAtualizada);
+              } else {
+                setModalDetalhes(false);
+                setMesaSelecionada(null);
+              }
+            }}
+          />
+        )}
+
+        {/* Modal de Divisão de Conta */}
+        {modalDivisao && mesaSelecionada && (
+          <ModalDivisaoConta
+            mesa={mesaSelecionada}
+            onClose={() => setModalDivisao(false)}
+            onFinalizado={async () => {
+              await fetchMesas(true); 
+              setModalDivisao(false);
+              setModalDetalhes(false);
+              setMesaSelecionada(null);
+            }}
+            // --- INÍCIO DA CORREÇÃO ---
+            // Passa a função de confirmação para o modal
+            askForConfirmation={askForConfirmation}
+            // --- FIM DA CORREÇÃO ---
           />
         )}
 

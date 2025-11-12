@@ -2,30 +2,37 @@
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './pages/Login';
-import { RegisterPage } from './pages/Register';
-import { CardapioPage } from './pages/Cardapio';
+// REMOVIDO: RegisterPage
+// REMOVIDO: CardapioPage
 
 import { MesasDashboard } from './pages/MesasDashboard';
-import { HistoricoPedidos } from './pages/HistoricoPedidos';
+// REMOVIDO: HistoricoPedidos
 import { AdminGuard } from './components/AdminGuard';
 import { AdminLayout } from './components/AdminLayout';
 import { ToastProvider } from './components/ToastProvider';
+
+// Imports da Comanda Mobile (Mantidos)
+import { MobileSelecaoMesa } from './pages/MobileSelecaoMesa';
+import { MobileCardapio } from './pages/MobileCardapio';
+import { MobileRevisaoPedido } from './pages/MobileRevisaoPedido';
 
 export default function App() {
   return (
     <>
       <ToastProvider />
       <Routes>
-        {/* Rotas Públicas */}
+        {/* Rota de Login (agora a principal) */}
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/registrar" element={<RegisterPage />} />
-        <Route path="/cardapio" element={<CardapioPage />} />
         
-        {/* Rota raiz */}
-        <Route path="/" element={<Navigate to="/cardapio" replace />} />
+        {/* Rotas Públicas REMOVIDAS */}
+        {/* <Route path="/registrar" element={<RegisterPage />} /> */}
+        {/* <Route path="/cardapio" element={<CardapioPage />} /> */}
+        
+        {/* Rota raiz: Redireciona para /login */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
 
         {/* ========================================================== */}
-        {/* ROTAS EXCLUSIVAS DE ADMIN */}
+        {/* ROTAS EXCLUSIVAS DE ADMIN (PC) */}
         {/* ========================================================== */}
         <Route element={<AdminGuard />}>
           <Route element={<AdminLayout />}>
@@ -34,7 +41,8 @@ export default function App() {
               element={<Navigate to="/admin/mesas" replace />}
             />
             <Route path="/admin/mesas" element={<MesasDashboard />} />
-            <Route path="/admin/historico" element={<HistoricoPedidos />} />
+            {/* Rota de histórico do cliente removida */}
+            {/* <Route path="/admin/historico" element={<HistoricoPedidos />} /> */}
             <Route 
               path="/admin/configuracoes" 
               element={
@@ -47,8 +55,15 @@ export default function App() {
           </Route>
         </Route>
         
-        {/* Rota de fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* ================================================== */}
+        {/* NOVAS ROTAS DA COMANDA MOBILE */}
+        {/* ================================================== */}
+        <Route path="/mobile" element={<MobileSelecaoMesa />} />
+        <Route path="/mobile/mesa/:codseq" element={<MobileCardapio />} />
+        <Route path="/mobile/mesa/:codseq/revisao" element={<MobileRevisaoPedido />} />
+        
+        {/* Rota de fallback: Redireciona para /login */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </>
   );

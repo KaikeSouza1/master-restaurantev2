@@ -117,4 +117,5 @@ export interface AdicionarItensDto {
 export interface FinalizarCaixaDto {
   cod_forma_pagto: number;
   num_caixa?: number;
+  id_empresa?: number; 
 }

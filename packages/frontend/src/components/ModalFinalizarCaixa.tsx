@@ -179,7 +179,6 @@ const gerarHtmlRecibo = (mesa: Mesa, empresaInfo: EmpresaInfo | null): string =>
     </head>
     <body>
       
-      <!-- CABEÇALHO -->
       <div class="header">
         <h1>${empresaInfo?.nome || 'RESTAURANTE'}</h1>
         <p>${empresaInfo?.endere}, ${empresaInfo?.num}</p>
@@ -187,7 +186,6 @@ const gerarHtmlRecibo = (mesa: Mesa, empresaInfo: EmpresaInfo | null): string =>
         <p>Tel: ${empresaInfo?.fone}</p>
       </div>
 
-      <!-- BOTÃO DE IMPRESSÃO -->
       <div class="btn-container">
         <button class="btn-imprimir" onclick="window.print()">
           🖨️ IMPRIMIR AGORA
@@ -195,7 +193,6 @@ const gerarHtmlRecibo = (mesa: Mesa, empresaInfo: EmpresaInfo | null): string =>
         <p class="instrucao">Clique no botão acima para imprimir</p>
       </div>
 
-      <!-- INFORMAÇÕES DO PEDIDO -->
       <div class="info-row">
         <span>Data:</span>
         <strong>${dataFormatada}</strong>
@@ -207,14 +204,12 @@ const gerarHtmlRecibo = (mesa: Mesa, empresaInfo: EmpresaInfo | null): string =>
 
       <div class="separador"></div>
 
-      <!-- ITENS DO PEDIDO -->
       <table>
         <tbody>
           ${itensHtml}
         </tbody>
       </table>
 
-      <!-- TOTAL -->
       <div class="total-section">
         <div class="total-row">
           <span>TOTAL A PAGAR:</span>
@@ -222,7 +217,6 @@ const gerarHtmlRecibo = (mesa: Mesa, empresaInfo: EmpresaInfo | null): string =>
         </div>
       </div>
 
-      <!-- RODAPÉ -->
       <div class="footer">
         <p><strong>★★★ OBRIGADO PELA PREFERÊNCIA! ★★★</strong></p>
         <p style="margin-top: 8px; font-size: 10px;">Documento não fiscal</p>
@@ -252,10 +246,13 @@ export function ModalFinalizarCaixa({
     setIsLoading(true);
 
     try {
+      // ================= INÍCIO DA CORREÇÃO =================
       await finalizarMesaCaixa(mesa.codseq, {
         cod_forma_pagto: formaPagtoId,
         num_caixa: 1,
+        id_empresa: 1, // LINHA ADICIONADA
       });
+      // ================== FIM DA CORREÇÃO ==================
       
       toast.success('✅ Venda registrada no caixa!');
       setSucesso(true);
