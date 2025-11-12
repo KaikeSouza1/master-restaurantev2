@@ -75,12 +75,9 @@ let RestauranteController = class RestauranteController {
         const user = req.user;
         return this.restauranteService.finalizarMesaCaixa(codseq, dto, user);
     }
-    async removerItemMesa(codseq, codseqItem, motivo, req) {
+    async removerItemMesa(codseq, codseqItem, req, motivo) {
         const user = req.user;
-        if (!motivo || motivo.trim().length < 3) {
-            throw new common_1.ConflictException('Motivo é obrigatório (mínimo 3 caracteres)');
-        }
-        return this.restauranteService.removerItem(codseq, codseqItem, motivo, user.id);
+        return this.restauranteService.removerItem(codseq, codseqItem, motivo || 'Sem motivo informado', user.id);
     }
     async editarQuantidadeItem(codseq, codseqItem, body) {
         if (!body.nova_quantidade || body.nova_quantidade <= 0) {
@@ -236,10 +233,10 @@ __decorate([
     (0, common_1.Delete)('admin/mesas/:codseq/itens/:codseqItem'),
     __param(0, (0, common_1.Param)('codseq', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Param)('codseqItem', common_1.ParseIntPipe)),
-    __param(2, (0, common_1.Body)('motivo')),
-    __param(3, (0, common_1.Req)()),
+    __param(2, (0, common_1.Req)()),
+    __param(3, (0, common_1.Body)('motivo')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Number, String, Object]),
+    __metadata("design:paramtypes", [Number, Number, Object, String]),
     __metadata("design:returntype", Promise)
 ], RestauranteController.prototype, "removerItemMesa", null);
 __decorate([

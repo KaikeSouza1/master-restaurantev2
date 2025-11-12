@@ -1,3 +1,5 @@
+// packages/frontend/src/components/ModalDetalhesMesa.tsx
+
 import ReactModal from 'react-modal';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Mesa } from '../types';
@@ -6,7 +8,7 @@ import {
   X,
   PlusCircle,
   ArrowRight,
-  Printer,
+  Printer, 
   CheckCircle,
   DollarSign,
   Info,
@@ -14,9 +16,7 @@ import {
   Package,
   Sparkles,
   ChefHat,
-  Combine,
-  Edit3, // <-- ADICIONADO ÍCONE
-  Users, // <-- ADICIONADO ÍCONE
+  Combine, 
 } from 'lucide-react';
 
 interface ModalProps {
@@ -24,7 +24,7 @@ interface ModalProps {
   onClose: () => void;
   onAdicionarItens: () => void;
   onTransferir: () => void;
-  onJuntar: () => void;
+  onJuntar: () => void; 
   onFecharConta: () => void;
   onFinalizarMesa: () => void; // (NFCe)
   onFinalizarCaixa: () => void; // (Imprimir/Caixa)
@@ -41,17 +41,17 @@ export function ModalDetalhesMesa({
   onJuntar,
   onFecharConta,
   onFinalizarMesa,
-  onFinalizarCaixa,
+  onFinalizarCaixa, 
   onFecharMesaVazia,
-  onDividirConta, // <-- Prop sendo usada
-  onEditarItens, // <-- Prop sendo usada
+  onDividirConta, // NOVO
+  onEditarItens, // NOVO
 }: ModalProps) {
   const status = (mesa.obs || 'NOVO').toUpperCase();
   const isPagamento = status === 'PAGAMENTO';
   const observacaoAtual = (mesa.obs !== 'PAGAMENTO' && mesa.obs !== 'NOVO' ? mesa.obs : '') || '';
   const mesaVazia = mesa.quitens.length === 0;
 
-  const statusConfig = isPagamento
+  const statusConfig = isPagamento 
     ? { bg: 'bg-gradient-to-r from-yellow-500 to-amber-600', text: 'Aguardando Pagamento', icon: DollarSign }
     : { bg: 'bg-gradient-to-r from-red-600 to-rose-700', text: 'Mesa Ocupada', icon: ChefHat };
 
@@ -104,13 +104,13 @@ export function ModalDetalhesMesa({
                 <div className="flex items-center space-x-1">
                   <Clock size={16} />
                   <span className="font-semibold">
-                    {mesa.data_hora_abertura
+                    {mesa.data_hora_abertura 
                       ? new Date(mesa.data_hora_abertura).toLocaleString('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })
                       : 'Agora'
                     }
                   </span>
@@ -139,18 +139,18 @@ export function ModalDetalhesMesa({
 
         {/* Content Area com Scroll */}
         <div className="p-6 flex-1 flex flex-col space-y-5 overflow-y-auto scroll-hide bg-gradient-to-b from-white to-brand-gray-light">
-
+          
           {/* Card do Valor Total - Destaque */}
-          <motion.div
+          <motion.div 
             whileHover={{ scale: 1.02 }}
             className="bg-gradient-to-br from-brand-blue-dark via-brand-blue-light to-blue-600 text-white p-6 rounded-2xl shadow-2xl text-center relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20"></div>
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full -ml-16 -mb-16"></div>
-
+            
             <div className="relative z-10">
               <p className="text-sm font-bold uppercase tracking-widest text-white/80 mb-2">Valor Total da Conta</p>
-              <motion.p
+              <motion.p 
                 className="text-6xl font-black drop-shadow-2xl"
                 animate={{ scale: [1, 1.05, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
@@ -169,7 +169,7 @@ export function ModalDetalhesMesa({
                 {mesa.quitens.length}
               </span>
             </h3>
-
+            
             <div className="max-h-60 overflow-y-auto space-y-3 scroll-hide pr-2">
               <AnimatePresence>
                 {mesa.quitens.length > 0 ? (
@@ -205,7 +205,7 @@ export function ModalDetalhesMesa({
               </AnimatePresence>
             </div>
           </div>
-
+          
           {/* Campo Observação Redesenhado */}
           <div className="bg-white p-5 rounded-2xl shadow-lg border border-zinc-200">
             <label className="text-lg font-bold text-zinc-800 mb-3 flex items-center space-x-2">
@@ -228,39 +228,36 @@ export function ModalDetalhesMesa({
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={onFinalizarMesa}
-                  className="col-span-2 bg-gradient-to-r from-brand-accent to-green-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all flex items-center justify-center space-x-3 relative overflow-hidden group"
-                >
-                  <CheckCircle size={24} />
-                  <span>Finalizar (Emissor NFCe)</span>
-                  <div className="absolute inset-0 bg-white/20 translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
-                </motion.button>
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={onFinalizarCaixa}
-                  className="col-span-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all flex items-center justify-center space-x-3 relative overflow-hidden group"
-                >
-                  <Printer size={24} />
-                  <span>Finalizar (Imprimir/Caixa)</span>
-                  <div className="absolute inset-0 bg-white/20 translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
-                </motion.button>
-
-                {/* ================================== */}
-                {/* BOTÃO PARA DIVIDIR CONTA (ADICIONADO) */}
-                {/* ================================== */}
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
                   onClick={onDividirConta}
                   className="col-span-2 bg-gradient-to-r from-purple-600 to-indigo-700 text-white py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all flex items-center justify-center space-x-3 relative overflow-hidden group"
                 >
-                  <Users size={24} />
+                  <DollarSign size={24} />
                   <span>Dividir Conta</span>
                   <div className="absolute inset-0 bg-white/20 translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
                 </motion.button>
 
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={onFinalizarMesa}
+                  className="bg-gradient-to-r from-brand-accent to-green-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all flex items-center justify-center space-x-3 relative overflow-hidden group"
+                >
+                  <CheckCircle size={24} />
+                  <span>NFCe</span>
+                  <div className="absolute inset-0 bg-white/20 translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                </motion.button>
+                
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={onFinalizarCaixa}
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all flex items-center justify-center space-x-3 relative overflow-hidden group"
+                >
+                  <Printer size={24} />
+                  <span>Imprimir</span>
+                  <div className="absolute inset-0 bg-white/20 translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                </motion.button>
+                
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -296,30 +293,16 @@ export function ModalDetalhesMesa({
                   <span>Adicionar Mais Itens</span>
                   <div className="absolute inset-0 bg-white/20 translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
                 </motion.button>
-
-                {/* ================================== */}
-                {/* BOTÃO PARA EDITAR ITENS (ADICIONADO) */}
-                {/* ================================== */}
+                
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={onEditarItens}
                   disabled={mesaVazia}
-                  className="bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition-all flex items-center justify-center space-x-2 shadow-md disabled:opacity-50"
+                  className="bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition-all flex items-center justify-center space-x-2 shadow-md disabled:opacity-50"
                 >
-                  <Edit3 size={20} />
+                  <Sparkles size={20} />
                   <span>Editar Itens</span>
-                </motion.button>
-
-                {/* Botão de Imprimir (movido) */}
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  disabled
-                  className="bg-zinc-200 text-zinc-500 py-3 rounded-xl font-semibold cursor-not-allowed flex items-center justify-center space-x-2 opacity-60 shadow-md"
-                >
-                  <Printer size={20} />
-                  <span>Imprimir Conta</span>
                 </motion.button>
 
                 <motion.button
@@ -329,20 +312,20 @@ export function ModalDetalhesMesa({
                   className="bg-zinc-600 text-white py-3 rounded-xl font-semibold hover:bg-zinc-700 transition-all flex items-center justify-center space-x-2 shadow-md"
                 >
                   <ArrowRight size={20} />
-                  <span>Transferir Mesa</span>
+                  <span>Transferir</span>
                 </motion.button>
-
+                
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={onJuntar}
                   disabled={mesaVazia}
-                  className="bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition-all flex items-center justify-center space-x-2 shadow-md disabled:opacity-50"
+                  className="col-span-2 bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition-all flex items-center justify-center space-x-2 shadow-md disabled:opacity-50"
                 >
                   <Combine size={20} />
-                  <span>Juntar Mesa</span>
+                  <span>Juntar com Outra Mesa</span>
                 </motion.button>
-
+                
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -353,7 +336,6 @@ export function ModalDetalhesMesa({
                   <DollarSign size={20} />
                   <span>Solicitar Conta</span>
                 </motion.button>
-
               </>
             )}
           </div>

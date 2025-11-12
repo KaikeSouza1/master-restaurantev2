@@ -1,3 +1,5 @@
+// packages/frontend/src/pages/MesasDashboard.tsx
+
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import {
@@ -15,20 +17,12 @@ import { ModalTransferirMesa } from '../components/ModalTransferirMesa';
 import { ModalConfirmacao } from '../components/ModalConfirmacao';
 import { ModalJuntarMesa } from '../components/ModalJuntarMesa';
 import { ModalFinalizarCaixa } from '../components/ModalFinalizarCaixa';
-// ==========================================================
-// IMPORTAÇÕES ADICIONADAS
-// ==========================================================
-import { ModalEditarItens } from '../components/ModalEditarItens';
-import { ModalDivisaoConta } from '../components/ModalDivisaoConta';
 import {
   Loader2,
   AlertTriangle,
   LayoutGrid,
   Filter,
-  Search,
-  // Ícones que já estavam aqui
-  Edit3, // Adicionado para o ModalDetalhesMesa
-  Users, // Adicionado para o ModalDetalhesMesa
+  Search, 
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -67,7 +61,7 @@ export function MesasDashboard() {
   const [mesasAtivas, setMesasAtivas] = useState<Mesa[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  
   const [empresaInfo, setEmpresaInfo] = useState<EmpresaInfo | null>(null);
 
   const [mesaSelecionada, setMesaSelecionada] = useState<Mesa | null>(null);
@@ -77,14 +71,8 @@ export function MesasDashboard() {
   const [modalJuntar, setModalJuntar] = useState(false);
   const [modalFinalizarCaixa, setModalFinalizarCaixa] = useState(false);
 
-  // ==========================================================
-  // ESTADOS ADICIONADOS
-  // ==========================================================
-  const [modalEditarItens, setModalEditarItens] = useState(false);
-  const [modalDividirConta, setModalDividirConta] = useState(false);
-
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('TODAS');
-  const [buscaMesa, setBuscaMesa] = useState<string>('');
+  const [buscaMesa, setBuscaMesa] = useState<string>(''); 
 
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
   const [confirmModalProps, setConfirmModalProps] = useState<{
@@ -109,24 +97,6 @@ export function MesasDashboard() {
     try {
       const data = await getMesasStatus();
       setMesasAtivas(data);
-
-      // ==========================================================
-      // ATUALIZA A MESA SELECIONADA (IMPORTANTE PARA MODAIS)
-      // ==========================================================
-      if (mesaSelecionada) {
-        const mesaAtualizada = data.find(m => m.codseq === mesaSelecionada.codseq);
-        if (mesaAtualizada) {
-          setMesaSelecionada(mesaAtualizada);
-        } else {
-          // A mesa foi fechada ou não existe mais
-          setMesaSelecionada(null);
-          setModalDetalhes(false);
-          setModalEditarItens(false);
-          setModalDividirConta(false);
-        }
-      }
-      // ==========================================================
-
     } catch (err) {
       setError('Falha ao carregar o status das mesas.');
       console.error(err);
@@ -134,31 +104,18 @@ export function MesasDashboard() {
     } finally {
       if (showLoading) setLoading(false);
     }
-  }, [mesaSelecionada]); // Adicionado mesaSelecionada como dependência
-
-  // Função para fechar TODOS os modais e recarregar
-  const handleCloseAndReload = async () => {
-    setModalDetalhes(false);
-    setMesaSelecionada(null);
-    setModalEditarItens(false);
-    setModalDividirConta(false);
-    setModalAdicionar(false);
-    setModalTransferir(false);
-    setModalJuntar(false);
-    setModalFinalizarCaixa(false);
-    await fetchMesas(true);
-  };
+  }, []);
 
   useEffect(() => {
     fetchMesas(true);
-
+    
     getEmpresaInfo()
       .then(setEmpresaInfo)
       .catch(err => {
         console.error("Falha ao buscar info da empresa", err);
         toast.error("Falha ao buscar dados da empresa.");
       });
-
+      
     const intervalId = setInterval(() => fetchMesas(false), 15000);
     return () => clearInterval(intervalId);
   }, [fetchMesas]);
@@ -228,7 +185,7 @@ export function MesasDashboard() {
             const mesaSegura: Mesa = {
               ...mesaAntiga,
               ...mesaAtualizadaApi,
-              quitens: mesaAtualizadaApi.quitens || mesaAntiga.quitens || [], // Usa quitens atualizados se vierem
+              quitens: mesaAntiga.quitens || [],
             };
             setMesasAtivas((prev) =>
               prev.map((m) =>
@@ -315,16 +272,19 @@ export function MesasDashboard() {
     );
   };
 
+  // ========== CORREÇÃO CRÍTICA ==========
+  // Só abre o modal de finalizar caixa se a mesa estiver em PAGAMENTO
   const handleFinalizarCaixa = () => {
     if (!mesaSelecionada || !mesaSelecionada.codseq) return;
-
+    
+    // VALIDAÇÃO: Só permite abrir se estiver em PAGAMENTO
     const status = (mesaSelecionada.obs || '').toUpperCase();
     if (status !== 'PAGAMENTO') {
       toast.error('Esta mesa não está em status de PAGAMENTO!');
       console.error('Tentativa de finalizar mesa fora do status PAGAMENTO:', mesaSelecionada);
       return;
     }
-
+    
     setModalFinalizarCaixa(true);
   };
 
@@ -406,29 +366,6 @@ export function MesasDashboard() {
   const handleAbrirJuntar = () => {
     setModalJuntar(true);
   };
-  
-  // ==========================================================
-  // FUNÇÕES ADICIONADAS PARA ABRIR OS NOVOS MODAIS
-  // ==========================================================
-  const handleAbrirEditarItens = () => {
-    if (!mesaSelecionada) return;
-    const status = (mesaSelecionada.obs || '').toUpperCase();
-    if (status === 'PAGAMENTO') {
-       toast.error('Não é possível editar itens de uma mesa em pagamento. Reabra a mesa primeiro.');
-       return;
-    }
-    setModalEditarItens(true);
-  };
-
-  const handleAbrirDividirConta = () => {
-     if (!mesaSelecionada) return;
-     const status = (mesaSelecionada.obs || '').toUpperCase();
-     if (status !== 'PAGAMENTO') {
-       toast.error('A mesa precisa estar em status de "PAGAMENTO" para dividir a conta.');
-       return;
-     }
-    setModalDividirConta(true);
-  };
 
   // Lógica de Geração das Mesas
   const mesasMapeadas = new Map(
@@ -452,6 +389,8 @@ export function MesasDashboard() {
         sub_total_geral: 0,
         total: 0,
         quitens: [],
+        nome_cli_esp: null,
+        fone_esp: null,
       };
       mesasCompletas.push(livre);
       mesasLivres.push(livre);
@@ -468,12 +407,12 @@ export function MesasDashboard() {
       return true;
     })
     .filter((mesa) => {
-      if (buscaMesa.trim() === '') return true;
-
+      if (buscaMesa.trim() === '') return true; 
+      
       const numMesa = mesa.num_quiosque ?? 0;
       return numMesa.toString().includes(buscaMesa.trim());
     });
-
+  
   const mesasOcupadasParaJuntar = mesasCompletas.filter(
     (m) => m.codseq !== 0 && m.codseq !== mesaSelecionada?.codseq && m.obs !== 'PAGAMENTO'
   );
@@ -565,7 +504,7 @@ export function MesasDashboard() {
 
         {/* Área de Filtros e Busca */}
         <div className="flex flex-wrap items-center justify-between gap-4">
-
+          
           {/* Botões de Filtro */}
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center space-x-2 text-zinc-600">
@@ -662,16 +601,11 @@ export function MesasDashboard() {
             onClose={() => setModalDetalhes(false)}
             onAdicionarItens={handleAbrirAdicionarItens}
             onTransferir={handleAbrirTransferir}
-            onJuntar={handleAbrirJuntar}
+            onJuntar={handleAbrirJuntar} 
             onFecharConta={handleSolicitarFechamento}
-            onFinalizarMesa={handleLiberarMesa}
-            onFinalizarCaixa={handleFinalizarCaixa}
+            onFinalizarMesa={handleLiberarMesa} 
+            onFinalizarCaixa={handleFinalizarCaixa} 
             onFecharMesaVazia={handleFecharMesaVazia}
-            // ==========================================================
-            // PROPS ADICIONADAS - "Ligando os fios"
-            // ==========================================================
-            onEditarItens={handleAbrirEditarItens}
-            onDividirConta={handleAbrirDividirConta}
           />
         )}
 
@@ -682,7 +616,24 @@ export function MesasDashboard() {
             onClose={() => setModalAdicionar(false)}
             onItensAdd={async () => {
               setModalAdicionar(false);
-              await fetchMesas(false); // fetchMesas JÁ ATUALIZA A MESA SELECIONADA
+              await fetchMesas(false);
+              const mesasAtualizadas = await getMesasStatus();
+              if (!mesaSelecionada?.codseq) {
+                console.warn('Callback onItensAdd sem mesa selecionada.');
+                setModalDetalhes(false);
+                setMesaSelecionada(null);
+                return;
+              }
+              const mesaAtualizada = mesasAtualizadas.find(
+                (m) => m.codseq === mesaSelecionada.codseq,
+              );
+              if (mesaAtualizada) {
+                setMesasAtivas(mesasAtualizadas);
+                setMesaSelecionada(mesaAtualizada);
+              } else {
+                setModalDetalhes(false);
+                setMesaSelecionada(null);
+              }
             }}
           />
         )}
@@ -697,11 +648,11 @@ export function MesasDashboard() {
               setModalTransferir(false);
               setModalDetalhes(false);
               setMesaSelecionada(null);
-              await fetchMesas(true);
+              await fetchMesas(true); 
             }}
           />
         )}
-
+        
         {/* Modal de Juntar Mesa */}
         {modalJuntar && mesaSelecionada && (
           <ModalJuntarMesa
@@ -712,7 +663,7 @@ export function MesasDashboard() {
               setModalJuntar(false);
               setModalDetalhes(false);
               setMesaSelecionada(null);
-              await fetchMesas(true);
+              await fetchMesas(true); 
             }}
           />
         )}
@@ -724,43 +675,17 @@ export function MesasDashboard() {
             empresaInfo={empresaInfo}
             onClose={() => {
               setModalFinalizarCaixa(false);
+              // NÃO fecha o modal de detalhes aqui
             }}
             onFinalizado={async () => {
-              await fetchMesas(true);
+              // Recarrega os dados
+              await fetchMesas(true); 
+              // Fecha os modais
               setModalDetalhes(false);
               setMesaSelecionada(null);
             }}
           />
         )}
-
-        {/* ========================================================== */}
-        {/* RENDERIZAÇÃO DOS NOVOS MODAIS ADICIONADA */}
-        {/* ========================================================== */}
-        {modalEditarItens && mesaSelecionada && (
-          <ModalEditarItens
-            mesa={mesaSelecionada}
-            onClose={() => setModalEditarItens(false)}
-            onAtualizado={async () => {
-              setModalEditarItens(false);
-              await fetchMesas(false); // fetchMesas já atualiza a mesaSelecionada
-            }}
-          />
-        )}
-
-        {modalDividirConta && mesaSelecionada && (
-          <ModalDivisaoConta
-            mesa={mesaSelecionada}
-            onClose={() => setModalDividirConta(false)}
-            onFinalizado={async () => {
-              setModalDividirConta(false);
-              setModalDetalhes(false);
-              setMesaSelecionada(null);
-              await fetchMesas(true);
-            }}
-          />
-        )}
-        {/* ========================================================== */}
-
 
         {/* Modal de Confirmação */}
         {confirmModalProps?.isOpen && (

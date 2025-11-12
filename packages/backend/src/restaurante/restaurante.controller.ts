@@ -10,8 +10,8 @@ import {
   Patch,
   UseGuards,
   Req,
-  Delete, // Importar Delete
-  ConflictException, // Importar ConflictException
+  Delete,
+  ConflictException,
 } from '@nestjs/common';
 import { RestauranteService } from './restaurante.service';
 import {
@@ -183,19 +183,17 @@ export class RestauranteController {
   async removerItemMesa(
     @Param('codseq', ParseIntPipe) codseq: number,
     @Param('codseqItem', ParseIntPipe) codseqItem: number,
-    @Body('motivo') motivo: string,
-    @Req() req: Request,
+    @Req() req: Request, // <-- MUDANÇA AQUI: Parâmetro obrigatório veio para antes
+    @Body('motivo') motivo?: string, // <-- MUDANÇA AQUI: Parâmetro opcional veio para depois
   ) {
     const user = req.user as AuthenticatedUser;
 
-    if (!motivo || motivo.trim().length < 3) {
-      throw new ConflictException('Motivo é obrigatório (mínimo 3 caracteres)');
-    }
+    // Bloco de validação removido na etapa anterior (correto)
 
     return this.restauranteService.removerItem(
       codseq,
       codseqItem,
-      motivo,
+      motivo || 'Sem motivo informado', // Lógica de fallback mantida
       user.id,
     );
   }

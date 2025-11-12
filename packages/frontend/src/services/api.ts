@@ -140,7 +140,7 @@ export const finalizarMesaCaixa = async (codseq: number, dto: FinalizarCaixaDto)
   const response = await apiClient.patch(`/admin/mesas/finalizar-caixa/${codseq}`, dto);
   return response.data;
 };
-export const removerItemMesa = async (codseq: number, codseqItem: number, motivo: string): Promise<Mesa> => {
+export const removerItemMesa = async (codseq: number, codseqItem: number, motivo?: string): Promise<Mesa> => { // <-- MUDANÇA AQUI
   const response = await apiClient.delete(`/admin/mesas/${codseq}/itens/${codseqItem}`, {
     data: { motivo }
   });
