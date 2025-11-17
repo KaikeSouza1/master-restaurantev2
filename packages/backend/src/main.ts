@@ -3,12 +3,15 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
+// Definir a porta padrão para o ambiente local
+const PORT = process.env.PORT || 3000;
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // Habilita o CORS (importante para Vercel)
+  // Habilita o CORS (Importante para Vercel/Local)
   app.enableCors({
-    origin: '*', // Você pode restringir isso para o seu domínio Vercel depois
+    origin: '*', // Mantém o '*' para desenvolvimento local
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type, Accept, Authorization',
   });
@@ -16,17 +19,10 @@ async function bootstrap() {
   // Adiciona o prefixo global que seu frontend espera
   app.setGlobalPrefix('api');
   
-  // Inicializa o app, mas não "escuta"
-  await app.init();
-  return app;
+  // Inicia o app no modo de servidor tradicional
+  await app.listen(PORT);
+  console.log(`Application is running on: ${await app.getUrl()}`);
 }
 
-// Exporta o manipulador serverless
-let cachedApp;
-export default async (req, res) => {
-  if (!cachedApp) {
-    cachedApp = await bootstrap();
-  }
-  const httpAdapter = cachedApp.getHttpAdapter();
-  httpAdapter.getInstance()(req, res);
-};
+// Executar a função de bootstrap para iniciar o servidor local
+bootstrap();

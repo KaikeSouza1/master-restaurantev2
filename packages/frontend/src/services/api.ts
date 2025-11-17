@@ -14,11 +14,12 @@ import type {
 } from '../types';
 
 // ==========================================================
-// CONFIGURAÇÃO DO AXIOS (MUDANÇA PARA VERCEL)
+// CONFIGURAÇÃO DO AXIOS (MUDANÇA PARA AMBIENTE LOCAL)
 // ==========================================================
 
-// 1. A API_URL agora é RELATIVA (vazia)
-const API_URL = '';
+// 1. A API_URL agora aponta para o backend local (porta 3000).
+//    Para voltar para a configuração de produção Vercel, mude para: const API_URL = '';
+const API_URL = 'http://localhost:3000'; 
 
 export const apiClient = axios.create({
   // 2. A baseURL agora aponta para /api/restaurante
@@ -40,16 +41,16 @@ apiClient.interceptors.request.use((config) => {
 
 
 // ==========================================================
-// FUNÇÕES DE AUTENTICAÇÃO (MUDANÇA PARA VERCEL)
+// FUNÇÕES DE AUTENTICAÇÃO (Ajustadas para o novo API_URL)
 // ==========================================================
 export const login = async (credentials: LoginDto): Promise<LoginResponse> => {
-  // 3. A rota de Auth agora é /api/auth/login
+  // 3. A rota de Auth agora é http://localhost:3000/api/auth/login
   const response = await axios.post(`${API_URL}/api/auth/login`, credentials);
   return response.data;
 };
 
 export const registrarCliente = async (dados: any) => {
-  // 4. A rota de Auth agora é /api/auth/registrar
+  // 4. A rota de Auth agora é http://localhost:3000/api/auth/registrar
   const response = await axios.post(`${API_URL}/api/auth/registrar`, dados);
   return response.data;
 };

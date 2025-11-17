@@ -1,12 +1,12 @@
 // packages/frontend/src/pages/MobileSelecaoMesa.tsx
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getMesasStatus, abrirMesa } from '../services/api';
 import type { Mesa } from '../types';
 import { formatCurrency } from '../utils/helpers';
-import { Loader2, AlertTriangle, Users } from 'lucide-react';
+import { Loader2, AlertTriangle, Users, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Total de mesas (igual ao seu dashboard)
@@ -17,6 +17,9 @@ export function MobileSelecaoMesa() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState<number | null>(null); // Qual mesa está abrindo
+  
+  const [filtroMesa, setFiltroMesa] = useState(''); // Estado para a busca
+
   const navigate = useNavigate();
 
   // Busca as mesas (igual ao dashboard)
@@ -64,29 +67,43 @@ export function MobileSelecaoMesa() {
     }
   };
 
-  // Gera a lista completa de mesas
-  const mesasMapeadas = new Map(mesasAtivas.map((m) => [m.num_quiosque, m]));
-  const mesasCompletas: Mesa[] = [];
-  for (let i = 1; i <= TOTAL_MESAS; i++) {
-    const ativa = mesasMapeadas.get(i);
-    if (ativa) {
-      mesasCompletas.push(ativa);
-    } else {
-      mesasCompletas.push({
-        codseq: 0,
-        num_quiosque: i,
-        tipo: 'M',
-        vda_finalizada: 'N',
-        obs: 'LIVRE',
-        data_hora_abertura: '',
-        sub_total_geral: 0,
-        total: 0,
-        quitens: [],
-        nome_cli_esp: null,
-        fone_esp: null,
-      });
+  // Gera a lista completa de mesas E FILTRA
+  const mesasFiltradas = useMemo(() => {
+    const mesasMapeadas = new Map(mesasAtivas.map((m) => [m.num_quiosque, m]));
+    const mesasCompletas: Mesa[] = [];
+    
+    for (let i = 1; i <= TOTAL_MESAS; i++) {
+      const ativa = mesasMapeadas.get(i);
+      if (ativa) {
+        mesasCompletas.push(ativa);
+      } else {
+        mesasCompletas.push({
+          codseq: 0,
+          num_quiosque: i,
+          tipo: 'M',
+          vda_finalizada: 'N',
+          obs: 'LIVRE',
+          data_hora_abertura: '',
+          sub_total_geral: 0,
+          total: 0,
+          quitens: [],
+          nome_cli_esp: null,
+          fone_esp: null,
+        });
+      }
     }
-  }
+
+    // Aplica o filtro aqui
+    if (!filtroMesa) {
+      return mesasCompletas;
+    }
+    return mesasCompletas.filter(m => 
+      // --- CORRIGIDO AQUI ---
+      // Usamos (m.num_quiosque ?? '') para tratar o caso de ser null
+      (m.num_quiosque ?? '').toString().includes(filtroMesa)
+    );
+  }, [mesasAtivas, filtroMesa]); // Recalcula quando as mesas ou o filtro mudam
+
 
   // Loading inicial
   if (loading && mesasAtivas.length === 0) {
@@ -126,13 +143,29 @@ export function MobileSelecaoMesa() {
         <Users size={28} className="text-brand-blue-light" />
       </div>
 
+      {/* Caixa de Busca */}
+      <div className="relative mb-4">
+        <input
+          type="number"
+          value={filtroMesa}
+          onChange={(e) => setFiltroMesa(e.target.value)}
+          placeholder="Buscar número da mesa..."
+          className="w-full p-4 pl-12 border-2 border-transparent bg-white rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-brand-blue-light focus:border-brand-blue-light"
+        />
+        <Search 
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" 
+          size={20} 
+        />
+      </div>
+
+
       {/* Grid de Mesas Otimizado para Mobile */}
       <motion.div 
         layout
         className="grid grid-cols-3 sm:grid-cols-4 gap-3"
       >
         <AnimatePresence>
-          {mesasCompletas.map((mesa) => {
+          {mesasFiltradas.map((mesa) => {
             const isLivre = mesa.codseq === 0;
             const isPagamento = mesa.obs === 'PAGAMENTO';
             const isLoading = opening === mesa.num_quiosque;

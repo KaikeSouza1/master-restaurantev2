@@ -483,7 +483,7 @@ export function MesasDashboard() {
               <h1 className="text-3xl font-black text-brand-blue-dark">
                 Painel de Mesas
               </h1>
-              <p className="text-zinc-600 font-medium">Gestão em tempo real</p>
+              <p className="text-zinc-600 font-medium"></p>
             </div>
           </div>
 
